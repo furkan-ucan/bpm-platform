@@ -1,36 +1,41 @@
-import { fileURLToPath } from "url";
-import { dirname } from "path";
 import { FlatCompat } from "@eslint/eslintrc";
 import js from "@eslint/js";
 import tsPlugin from "@typescript-eslint/eslint-plugin";
 import tsParser from "@typescript-eslint/parser";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
 const compat = new FlatCompat({
-  baseDirectory: __dirname,
+  baseDirectory: import.meta.url,
+  recommendedConfig: js.configs.recommended,
 });
 
 export default [
   {
-    files: ["**/*.{js,ts}"],
-    ...js.configs.recommended,
+    ignores: ["dist/**", "coverage/**", "node_modules/**"],
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: "module",
+      globals: {
+        jest: true,
+        expect: true,
+        describe: true,
+        it: true,
+        beforeEach: true,
+        afterEach: true,
+        beforeAll: true,
+        afterAll: true,
+      },
     },
   },
   {
     files: ["**/*.ts"],
-    plugins: {
-      "@typescript-eslint": tsPlugin,
-    },
     languageOptions: {
       parser: tsParser,
       parserOptions: {
         project: "./tsconfig.json",
       },
+    },
+    plugins: {
+      "@typescript-eslint": tsPlugin,
     },
     rules: {
       ...tsPlugin.configs.recommended.rules,
@@ -38,17 +43,21 @@ export default [
       "@typescript-eslint/no-explicit-any": "warn",
       "@typescript-eslint/no-unused-vars": [
         "error",
-        { argsIgnorePattern: "^_" },
+        {
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+        },
       ],
+      "@typescript-eslint/consistent-type-imports": "error",
       "no-console": ["warn", { allow: ["warn", "error"] }],
     },
   },
   {
-    ignores: [
-      "**/dist/**",
-      "**/node_modules/**",
-      "**/coverage/**",
-      "**/*.config.js",
-    ],
+    files: ["**/*.test.ts", "**/*.spec.ts"],
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/explicit-function-return-type": "off",
+      "no-undef": "off",
+    },
   },
 ];

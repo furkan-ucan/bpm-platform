@@ -1,22 +1,25 @@
 {
   "compilerOptions": {
     "target": "es2018",
-    "module": "commonjs",
-    "outDir": "./dist",
-    "rootDir": ".",
-    "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
     "baseUrl": ".",
     "paths": {
       "@/*": ["./*"]
     },
-    "resolveJsonModule": true,
-    "moduleResolution": "node",
-    "types": ["node", "express", "jest"],
-    "typeRoots": ["./node_modules/@types", "./shared/types"]
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "types": ["node", "jest"]
   },
-  "include": ["./**/*.ts", "./shared/types/**/*.d.ts"],
+  "include": [
+    "./**/*.ts",
+    "./**/*.js",
+    "./**/*.cjs",
+    "./**/*.mjs",
+    "eslint.config.js",
+    "jest.config.cjs"
+  ],
   "exclude": ["node_modules", "dist"]
 }

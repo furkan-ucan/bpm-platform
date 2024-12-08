@@ -1,13 +1,13 @@
 // İmport yollarını güncelle
 import { ProcessService } from "../../features/processes/services/process.service";
-import { ProcessRepository } from "../../infrastructure/database/mongodb/repositories/ProcessRepository";
-import { BPMNEngine } from "../../core/bpmn/engine/bpmn-engine";
+import type { ProcessRepository } from "../../infrastructure/database/mongodb/repositories/ProcessRepository";
+import type { BPMNEngine } from "../../core/bpmn/engine/bpmn-engine";
 import { Types } from "mongoose";
 import { ValidationError } from "../../shared/errors/types/app-error";
-import { IProcess } from "../../features/processes/models/process.model";
-import { ProcessStatus } from "../../features/processes/types/process.types";
+import type { IProcess } from "../../features/processes/models/process.model";
+import type { ProcessStatus } from "../../features/processes/types/process.types";
 import { ERROR_MESSAGES } from "../../monitoring/logging/providers/winston.logger";
-import { ProcessFilterDTO } from "../../features/processes/dtos/process-filter.dto";
+import type { ProcessFilterDTO } from "../../features/processes/dtos/process-filter.dto";
 import { createMockProcess } from "../helpers/process.fixtures";
 
 // Test interface'ini güncelle
