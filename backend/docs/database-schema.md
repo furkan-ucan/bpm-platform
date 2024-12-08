@@ -1,207 +1,295 @@
-# 📚 Database Schema Documentation
+# 📚 BPM Platform Database Schema
 
-## 🗄️ Collections Overview
+## 🎯 Overview
 
-Our MongoDB database is organized into several collections, each serving a specific purpose in the BPM platform.
+Our BPM Platform uses MongoDB as its primary database, implementing a comprehensive schema design that supports all business process management functionalities. This document details the collections, relationships, and optimization strategies.
+
+## 🗄️ Core Collections
 
 ### Entity Relationship Diagram
 
 ```mermaid
 erDiagram
-    USERS ||--o{ PROCESSES : creates
-    USERS ||--o{ TASKS : assigned
-    PROCESSES ||--o{ TASKS : contains
-    PROCESSES ||--o{ PROCESS_VERSIONS : has
-    TASKS }|--|| WORKFLOW_HISTORY : logs
-    USERS ||--o{ COMMENTS : writes
-    TASKS ||--o{ COMMENTS : has
-    PROCESSES ||--o{ SLA_DEFINITIONS : defines
-    TASKS ||--o{ SLA_TRACKING : tracks
-    
     USERS {
-        ObjectId _id
-        string email
-        string name
-        string role
-        date createdAt
-        date updatedAt
+        ObjectId user_id PK
+        String name
+        String email
+        String password
+        ObjectId role_id FK
+        Boolean is_active
+        String profile_picture
+        String preferred_language
+        Date created_at
+        Date updated_at
     }
-    
+
+    ROLES {
+        ObjectId role_id PK
+        String role_name
+        String[] permissions
+        Date created_at
+    }
+
+    ACCESSCONTROL_LISTS {
+        ObjectId acl_id PK
+        ObjectId role_id FK
+        String entity
+        ObjectId entity_id
+        String[] permissions
+        Date created_at
+    }
+
     PROCESSES {
-        ObjectId _id
-        string name
-        string description
-        int version
-        string status
-        string bpmnXml
-        ObjectId createdBy
-        date createdAt
-        date updatedAt
+        ObjectId process_id PK
+        String name
+        String description
+        ObjectId creator_id FK
+        String bpmn_data
+        String status
+        Number version
+        String category
+        String[] tags
+        Date created_at
+        Date updated_at
     }
-    
+
+    PROCESS_VERSIONS {
+        ObjectId version_id PK
+        ObjectId process_id FK
+        String bpmn_data
+        Number version_number
+        Date created_at
+        ObjectId created_by FK
+    }
+
+    ACTIVITIES {
+        ObjectId activity_id PK
+        ObjectId process_id FK
+        String name
+        String type
+        String status
+        ObjectId assigned_to FK
+        String priority
+        String notes
+        Date due_date
+        Date started_at
+        Date completed_at
+        Date created_at
+        Date updated_at
+    }
+
     TASKS {
-        ObjectId _id
-        ObjectId processId
-        string name
-        string description
-        ObjectId assignee
-        string status
-        date dueDate
-        date createdAt
-        date updatedAt
+        ObjectId task_id PK
+        ObjectId activity_id FK
+        ObjectId assigned_to FK
+        String status
+        Date due_date
+        Date[] reminders
+        Date created_at
+        Date updated_at
     }
+
+    WORKFLOW_HISTORY ||--|{ USERS : "performed by"
+    WORKFLOW_HISTORY ||--|{ PROCESSES : "belongs to"
+    WORKFLOW_HISTORY ||--|{ ACTIVITIES : "tracks"
+
+    USERS ||--o{ ROLES : "has"
+    ROLES ||--o{ ACCESSCONTROL_LISTS : "manages"
+    USERS ||--o{ ACCESSCONTROL_LISTS : "has access"
+    USERS ||--o{ PROCESSES : "creates"
+    PROCESSES ||--|{ PROCESS_VERSIONS : "has versions"
+    USERS ||--o{ PROCESS_VERSIONS : "created by"
+    PROCESSES ||--o{ ACTIVITIES : "includes"
+    ACTIVITIES ||--o{ TASKS : "contains"
+    USERS ||--o{ NOTIFICATIONS : "receives"
+    USERS ||--o{ COMMENTS : "writes"
+    USERS ||--o{ FILES : "uploads"
+    USERS ||--o{ INTEGRATION_SETTINGS : "configures"
 ```
 
-## 📋 Collection Details
+## 📦 Collection Details
 
-### 👤 Users Collection
+### 👤 Users & Authentication
 
+#### Users Collection
 ```javascript
 {
   _id: ObjectId,
-  email: String,         // Unique email address
-  name: String,          // Full name of the user
-  role: String,          // [admin, manager, user]
+  name: String,            // User's full name
+  email: String,           // Unique email address
+  password: String,        // Hashed password
+  role_id: ObjectId,       // Reference to ROLES
+  is_active: Boolean,      // Account status
+  profile_picture: String, // URL to profile picture
   settings: {
-    language: String,    // Preferred language
-    timezone: String,    // User's timezone
-    theme: String        // UI theme preference
+    language: String,      // Preferred language
+    timezone: String,      // User's timezone
+    theme: String         // UI theme preference
   },
-  createdAt: Date,
-  updatedAt: Date
+  created_at: Date,
+  updated_at: Date
 }
 ```
 
-#### 🔑 Indexes
-- `{ email: 1 }` (unique)
-- `{ role: 1 }`
+### 🔐 Access Control
 
-### 📝 Processes Collection
-
+#### Roles Collection
 ```javascript
 {
   _id: ObjectId,
-  name: String,          // Process name
-  description: String,   // Detailed description
+  role_name: String,      // e.g., "admin", "manager", "user"
+  permissions: [String],  // Array of permission codes
+  created_at: Date
+}
+```
+
+### 📋 Process Management
+
+#### Processes Collection
+```javascript
+{
+  _id: ObjectId,
+  name: String,           // Process name
+  description: String,    // Process description
+  creator_id: ObjectId,   // Reference to USERS
+  bpmn_data: String,     // BPMN 2.0 XML
+  status: String,        // ["draft", "active", "completed", "archived"]
   version: Number,       // Current version number
-  status: String,        // [draft, active, archived]
-  bpmnXml: String,      // BPMN 2.0 XML definition
+  category: String,      // Process category
+  tags: [String],        // Search tags
   metadata: {
-    category: String,    // Process category
-    tags: [String],      // Search tags
-    priority: Number     // Process priority
+    priority: Number,    // Process priority
+    estimated_time: Number,
+    cost_center: String
   },
-  createdBy: ObjectId,   // Reference to Users
-  createdAt: Date,
-  updatedAt: Date
+  created_at: Date,
+  updated_at: Date
 }
 ```
 
-#### 🔑 Indexes
-- `{ name: 1 }`
-- `{ "metadata.category": 1 }`
-- `{ status: 1 }`
+## 🔍 Indexing Strategy
 
-### ✅ Tasks Collection
+### 🎯 Performance Indexes
 
 ```javascript
-{
-  _id: ObjectId,
-  processId: ObjectId,   // Reference to Processes
-  name: String,          // Task name
-  description: String,   // Task description
-  assignee: ObjectId,    // Reference to Users
-  status: String,        // [pending, active, completed, failed]
-  priority: Number,      // Task priority (1-5)
-  dueDate: Date,        // Deadline
-  metadata: {
-    type: String,        // Task type
-    category: String,    // Task category
-    tags: [String]       // Search tags
-  },
-  createdAt: Date,
-  updatedAt: Date
-}
+// Users Collection
+db.users.createIndex({ "email": 1 }, { unique: true })
+db.users.createIndex({ "role_id": 1 })
+
+// Processes Collection
+db.processes.createIndex({ "creator_id": 1 })
+db.processes.createIndex({ "status": 1 })
+db.processes.createIndex({ "category": 1 })
+db.processes.createIndex({ "tags": 1 })
+
+// Activities Collection
+db.activities.createIndex({ "process_id": 1 })
+db.activities.createIndex({ "assigned_to": 1 })
+db.activities.createIndex({ "status": 1, "due_date": 1 })
 ```
 
-#### 🔑 Indexes
-- `{ processId: 1 }`
-- `{ assignee: 1 }`
-- `{ status: 1 }`
-- `{ dueDate: 1 }`
+## 🛡️ Data Validation
 
-## 🔒 Data Validation
-
-### Users Validation Rules
+### Validation Rules Example
 
 ```javascript
-{
+db.createCollection("users", {
   validator: {
     $jsonSchema: {
       bsonType: "object",
-      required: ["email", "name", "role"],
+      required: ["email", "name", "role_id"],
       properties: {
         email: {
           bsonType: "string",
           pattern: "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"
         },
-        role: {
-          enum: ["admin", "manager", "user"]
+        role_id: {
+          bsonType: "objectId"
         }
+      }
+    }
+  }
+})
+```
+
+## 📊 Performance Optimization
+
+### 🚀 Query Optimization Tips
+
+1. **Use Covered Queries**
+   ```javascript
+   // Good ✅
+   db.users.find({ role_id: ObjectId("...") }, { email: 1, _id: 0 })
+   
+   // Avoid ❌
+   db.users.find({ role_id: ObjectId("...") })
+   ```
+
+2. **Compound Indexes for Common Queries**
+   ```javascript
+   // For status + date range queries
+   db.tasks.createIndex({ "status": 1, "due_date": 1 })
+   ```
+
+## 🔒 Security Measures
+
+### 1. Field-Level Encryption
+```javascript
+{
+  "integration_settings": {
+    "api_key": {
+      "$encrypt": {
+        "keyId": ["UUID"],
+        "algorithm": "AEAD_AES_256_CBC_HMAC_SHA_512_Random"
       }
     }
   }
 }
 ```
 
-## 🔄 Relationships
-
-```mermaid
-graph LR
-    A[Tasks] -->|processId| B[Processes]
-    A -->|assignee| C[Users]
-    B -->|createdBy| C
-    style A fill:#f9f,stroke:#333,stroke-width:2px
-    style B fill:#bbf,stroke:#333,stroke-width:2px
-    style C fill:#bfb,stroke:#333,stroke-width:2px
+### 2. Access Control
+```javascript
+db.createRole({
+  role: "processViewer",
+  privileges: [
+    {
+      resource: { db: "bpm_platform", collection: "processes" },
+      actions: [ "find" ]
+    }
+  ],
+  roles: []
+})
 ```
 
 ## 💾 Backup Strategy
 
-### 🔄 Backup Schedule
-- 📅 Daily full backups at 00:00 UTC
-- 🕐 Hourly incremental backups
-- ⏱️ Point-in-time recovery enabled
-- 🌍 Geo-redundant backup storage
+### 🔄 Automated Backups
 
-### 🔒 Security Measures
-1. 🔐 Field-level encryption for sensitive data
-2. 👥 Role-based access control
-3. 🔒 TLS/SSL encryption for all connections
-4. 📝 Comprehensive audit logging
+1. **Daily Full Backup** (00:00 UTC)
+```bash
+mongodump --uri="mongodb://localhost:27017/bpm_platform" --out=/backup/daily/$(date +%Y%m%d)
+```
 
-## 📊 Performance Optimization
+2. **Hourly Incremental Backup**
+```bash
+mongodump --uri="mongodb://localhost:27017/bpm_platform" --out=/backup/hourly/$(date +%Y%m%d_%H) --incremental
+```
 
-### 🚀 Indexing Strategy
-- Compound indexes for frequent queries
-- Text indexes for search functionality
-- TTL indexes for temporary data
+### 🌍 Geo-Redundancy
+- Primary backup: AWS S3
+- Secondary backup: Azure Blob Storage
+- Tertiary backup: Local NAS
 
-### 🎯 Query Optimization
-- Covered queries where possible
-- Aggregation pipeline optimization
-- Proper index usage monitoring
+## 📈 Monitoring & Alerts
 
-## 🔍 Monitoring
-
-### 📈 Key Metrics
+### Key Metrics
 - Query performance
-- Index usage
+- Index usage statistics
 - Storage utilization
 - Connection pool status
 
-### ⚡ Performance Alerts
-- Slow query warnings
-- High CPU usage
-- Memory pressure
-- Disk space warnings
+### Alert Thresholds
+- Query execution time > 100ms
+- Storage usage > 80%
+- Connection pool usage > 85%
+- Index miss rate > 5%
