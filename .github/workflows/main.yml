@@ -169,26 +169,26 @@ jobs:
 
   notify:
     name: Notify
-    needs: [deploy-staging, deploy-production]
+    needs: [validate, test, build]
     runs-on: ubuntu-latest
     if: always()
     steps:
-      - name: Notify Success
+      - name: Notify on Success
         if: ${{ success() }}
         uses: rtCamp/action-slack-notify@v2
         env:
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
-          SLACK_CHANNEL: deployments
+          SLACK_CHANNEL: ci-cd
           SLACK_COLOR: good
-          SLACK_MESSAGE: 'Deployment completed successfully :rocket:'
-          SLACK_TITLE: Deployment Status
+          SLACK_TITLE: Build Success
+          SLACK_MESSAGE: 'Pipeline completed successfully! 🎉'
 
-      - name: Notify Failure
+      - name: Notify on Failure
         if: ${{ failure() }}
         uses: rtCamp/action-slack-notify@v2
         env:
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
-          SLACK_CHANNEL: deployments
+          SLACK_CHANNEL: ci-cd
           SLACK_COLOR: danger
-          SLACK_MESSAGE: 'Deployment failed :x:'
-          SLACK_TITLE: Deployment Status
+          SLACK_TITLE: Build Failed
+          SLACK_MESSAGE: 'Pipeline failed! Please check the logs 🚨'
