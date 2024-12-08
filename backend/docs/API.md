@@ -209,3 +209,310 @@ client = BPMPlatform('YOUR_API_KEY')
 processes = client.processes.list()
 print(processes)
 ```
+
+### User Management
+
+#### Create User
+```http
+POST /api/v1/users
+Content-Type: application/json
+Authorization: Bearer <token>
+
+{
+  "name": "John Doe",
+  "email": "john@example.com",
+  "password": "securepass123",
+  "role": "user",
+  "settings": {
+    "language": "en",
+    "timezone": "UTC"
+  }
+}
+```
+
+#### Get User
+```http
+GET /api/v1/users/{userId}
+Authorization: Bearer <token>
+```
+
+#### Update User
+```http
+PUT /api/v1/users/{userId}
+Content-Type: application/json
+Authorization: Bearer <token>
+
+{
+  "name": "John Updated",
+  "settings": {
+    "language": "fr"
+  }
+}
+```
+
+### Process Management
+
+#### Create Process
+```http
+POST /api/v1/processes
+Content-Type: application/json
+Authorization: Bearer <token>
+
+{
+  "name": "Invoice Approval",
+  "description": "Process for approving invoices",
+  "bpmn_data": "<bpmn>...</bpmn>",
+  "metadata": {
+    "category": "Finance",
+    "tags": ["invoice", "approval"],
+    "priority": 2
+  }
+}
+```
+
+#### List Processes
+```http
+GET /api/v1/processes?status=active&category=Finance
+Authorization: Bearer <token>
+```
+
+Response:
+```json
+{
+  "data": [
+    {
+      "id": "507f1f77bcf86cd799439011",
+      "name": "Invoice Approval",
+      "description": "Process for approving invoices",
+      "status": "active",
+      "version": 1,
+      "metadata": {
+        "category": "Finance",
+        "tags": ["invoice", "approval"],
+        "priority": 2
+      },
+      "created_at": "2024-01-01T00:00:00Z",
+      "updated_at": "2024-01-01T00:00:00Z"
+    }
+  ],
+  "pagination": {
+    "total": 45,
+    "page": 1,
+    "per_page": 20
+  }
+}
+```
+
+### Task Management
+
+#### Create Task
+```http
+POST /api/v1/tasks
+Content-Type: application/json
+Authorization: Bearer <token>
+
+{
+  "process_id": "507f1f77bcf86cd799439011",
+  "name": "Review Invoice",
+  "description": "Review invoice details and approve/reject",
+  "assignee": "507f1f77bcf86cd799439012",
+  "due_date": "2024-01-15T00:00:00Z",
+  "priority": 2
+}
+```
+
+#### Update Task Status
+```http
+PATCH /api/v1/tasks/{taskId}/status
+Content-Type: application/json
+Authorization: Bearer <token>
+
+{
+  "status": "completed",
+  "comment": "Invoice approved and processed"
+}
+```
+
+### Reports
+
+#### Generate Process Report
+```http
+POST /api/v1/reports/process/{processId}
+Content-Type: application/json
+Authorization: Bearer <token>
+
+{
+  "type": "performance",
+  "date_range": {
+    "start": "2024-01-01T00:00:00Z",
+    "end": "2024-01-31T23:59:59Z"
+  },
+  "metrics": ["completion_time", "bottlenecks", "costs"]
+}
+```
+
+## Webhooks
+
+### Register Webhook
+```http
+POST /api/v1/webhooks
+Content-Type: application/json
+Authorization: Bearer <token>
+
+{
+  "url": "https://your-system.com/webhook",
+  "events": ["process.completed", "task.assigned"],
+  "secret": "your-webhook-secret"
+}
+```
+
+### Webhook Payload Example
+```json
+{
+  "event": "process.completed",
+  "timestamp": "2024-01-01T12:00:00Z",
+  "data": {
+    "process_id": "507f1f77bcf86cd799439011",
+    "name": "Invoice Approval",
+    "completion_time": 3600,
+    "final_status": "approved"
+  }
+}
+```
+
+## Error Handling
+
+### Error Response Format
+```json
+{
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Invalid input data",
+    "details": [
+      {
+        "field": "email",
+        "message": "Invalid email format"
+      }
+    ]
+  }
+}
+```
+
+### Common Error Codes
+- `400`: Bad Request
+- `401`: Unauthorized
+- `403`: Forbidden
+- `404`: Not Found
+- `422`: Validation Error
+- `429`: Too Many Requests
+- `500`: Internal Server Error
+
+## Security
+
+### Rate Limiting
+```http
+X-RateLimit-Limit: 100
+X-RateLimit-Remaining: 95
+X-RateLimit-Reset: 1640995200
+```
+
+### CORS Configuration
+```javascript
+{
+  "origin": ["https://your-domain.com"],
+  "methods": ["GET", "POST", "PUT", "DELETE", "PATCH"],
+  "allowedHeaders": ["Content-Type", "Authorization"],
+  "exposedHeaders": ["X-RateLimit-Limit", "X-RateLimit-Remaining"],
+  "maxAge": 86400
+}
+```
+
+## Data Models
+
+### User Model
+```typescript
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: "admin" | "manager" | "user";
+  settings: {
+    language: string;
+    timezone: string;
+    theme: string;
+  };
+  created_at: string;
+  updated_at: string;
+}
+```
+
+### Process Model
+```typescript
+interface Process {
+  id: string;
+  name: string;
+  description: string;
+  version: number;
+  status: "draft" | "active" | "completed" | "archived";
+  bpmn_data: string;
+  metadata: {
+    category: string;
+    tags: string[];
+    priority: number;
+  };
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+```
+
+## Query Parameters
+
+### Filtering
+```http
+GET /api/v1/processes?status=active&category=Finance&priority=high
+```
+
+### Pagination
+```http
+GET /api/v1/tasks?page=2&per_page=20
+```
+
+### Sorting
+```http
+GET /api/v1/processes?sort=created_at:desc,name:asc
+```
+
+### Field Selection
+```http
+GET /api/v1/users?fields=id,name,email
+```
+
+## Versioning
+
+The API is versioned through the URL path:
+```
+https://api.bpm-platform.com/v1/
+```
+
+### Version History
+- `v1`: Current stable version
+- `v2`: Beta (contact support for access)
+
+## Development Tools
+
+### Postman Collection
+Download our Postman collection for easy API testing:
+[BPM Platform API Collection](https://api.bpm-platform.com/postman/collection.json)
+
+### API Client Libraries
+- [JavaScript SDK](https://github.com/bpm-platform/js-sdk)
+- [Python SDK](https://github.com/bpm-platform/python-sdk)
+- [Java SDK](https://github.com/bpm-platform/java-sdk)
+
+## Support
+
+For API support:
+- Email: api-support@bpm-platform.com
+- Documentation: https://docs.bpm-platform.com
+- Status Page: https://status.bpm-platform.com
