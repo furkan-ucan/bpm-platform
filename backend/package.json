@@ -37,6 +37,8 @@
     "winston": "^3.17.0"
   },
   "devDependencies": {
+    "@eslint/eslintrc": "^2.1.4",
+    "@eslint/js": "^8.56.0",
     "@types/bcryptjs": "^2.4.6",
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.0",
