@@ -11,22 +11,11 @@ const __dirname = dirname(__filename);
 const compat = new FlatCompat({
   baseDirectory: __dirname,
   resolvePluginsRelativeTo: __dirname,
+  recommendedConfig: js.configs.recommended,
 });
 
 export default [
   js.configs.recommended,
-  ...compat.config({
-    extends: [
-      "eslint:recommended",
-      "plugin:@typescript-eslint/recommended"
-    ],
-    parser: "@typescript-eslint/parser",
-    plugins: ["@typescript-eslint"],
-    root: true,
-  }),
-  {
-    ignores: ["dist/**", "node_modules/**", "coverage/**"],
-  },
   {
     files: ["**/*.ts"],
     languageOptions: {
@@ -44,5 +33,8 @@ export default [
       "@typescript-eslint/no-unused-vars": ["error", { "argsIgnorePattern": "^_" }],
       "no-console": ["warn", { allow: ["warn", "error"] }],
     },
+  },
+  {
+    ignores: ["dist/**", "node_modules/**", "coverage/**"],
   },
 ];
