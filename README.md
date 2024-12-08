@@ -1,156 +1,141 @@
-# Cloud-Based Business Process Management (BPM) Platform
+# BPM Platform
 
-A modern, cloud-based Business Process Management platform designed to help enterprises model, automate, and optimize their business processes.
+🚧 **Project Status: Under Active Development** 🚧
 
-## 🚀 Features
+This project is currently in active development. We are building a comprehensive cloud-based Business Process Management (BPM) platform with advanced features and robust technological infrastructure.
 
-- 📊 Drag-and-drop BPMN process modeling
-- 🤝 Real-time collaboration
-- 📱 Responsive design for all devices
-- 🔄 Process versioning and history tracking
-- 📈 Advanced analytics and reporting
-- 🔌 Third-party system integrations
-- 🌍 Multi-language support
-- 📋 SLA monitoring and management
-- 🔐 Role-based access control (RBAC)
-- 📝 Audit logging and compliance tracking
+## Development Roadmap
 
-## 🛠️ Technology Stack
+### Phase 1: Infrastructure Setup ✅
+- [x] Project structure
+- [x] Documentation setup
+- [x] Database schema design
+- [x] CI/CD pipeline configuration
 
-### Backend
+### Phase 2: Core Development 🏗️ (Current)
+- [ ] Backend API development
+- [ ] Authentication system
+- [ ] Process modeling engine
+- [ ] Basic frontend setup
 
-- Node.js with Express.js
-- TypeScript
-- MongoDB
-- Socket.IO for real-time features
-- Jest for testing
+### Phase 3: Advanced Features (Upcoming)
+- [ ] Real-time collaboration
+- [ ] Process versioning
+- [ ] SLA monitoring
+- [ ] Advanced analytics
 
-### Frontend
+### Phase 4: Enterprise Features (Planned)
+- [ ] Multi-tenant architecture
+- [ ] Advanced security features
+- [ ] Integration framework
+- [ ] Custom reporting engine
 
-- React.js
-- Redux Toolkit for state management
-- BPMN.io for process modeling
-- Material-UI components
+## Project Overview
 
-## 🏗️ Architecture
+### Technology Stack
+- **Backend**: Node.js, Express.js, TypeScript
+- **Database**: MongoDB
+- **Frontend**: React.js, Redux Toolkit
+- **Process Modeling**: bpmn.io
+- **Testing**: Jest, Supertest
+- **CI/CD**: GitHub Actions
 
-The platform follows a microservices architecture with:
+### Key Features (Planned)
+- Process Modeling and Automation
+- Role-Based Access Control
+- Real-time Collaboration
+- SLA Monitoring and Tracking
+- Advanced Analytics and Reporting
+- Multi-language Support
+- Cloud-native Architecture
 
-- RESTful API design
-- Event-driven architecture
-- Scalable cloud infrastructure
-- Secure authentication and authorization
-- Comprehensive logging and monitoring
+## Development Progress
 
-## 🚦 Getting Started
+We are actively working on the core components of the platform. Here's what's been completed and what's in progress:
 
-### Prerequisites
+### Completed ✅
+- Project structure and documentation
+- Database schema design with MongoDB
+- Basic API documentation
+- Development and deployment guides
+- CI/CD pipeline with GitHub Actions
 
-- Node.js (v18 or higher)
-- MongoDB
-- npm or yarn
+### In Progress 🏗️
+- Backend service implementation
+- API endpoints development
+- Authentication system
+- Basic frontend setup
 
-### Installation
+### Coming Soon 📅
+- Process modeling engine
+- User interface components
+- Real-time collaboration features
+- Initial testing framework
 
-1. Clone the repository
+## Contributing
 
+We welcome contributions! The project is in active development, and we're looking for contributors who can help with:
+
+- Backend development (Node.js/TypeScript)
+- Frontend development (React.js)
+- Documentation improvements
+- Testing and QA
+- Security reviews
+- Performance optimization
+
+Please check our [Contributing Guide](./docs/CONTRIBUTING.md) for more details.
+
+## Development Setup
+
+1. Clone the repository:
 ```bash
-git clone https://github.com/furkan-ucan/bpm-platform.git
+git clone https://github.com/your-username/bpm-platform.git
 cd bpm-platform
 ```
 
-2. Install dependencies
-
+2. Install dependencies:
 ```bash
-# Install backend dependencies
+# Backend
 cd backend
 npm install
 
-# Install frontend dependencies (when available)
+# Frontend (when available)
 cd ../frontend
 npm install
 ```
 
-3. Configure environment variables
-
+3. Set up environment variables:
 ```bash
-# In backend directory
 cp .env.example .env
+# Edit .env with your configuration
 ```
 
-Edit .env file with your configuration
-
-4. Start development servers
-
+4. Start development servers:
 ```bash
-# Start backend server
-cd backend
+# Backend
 npm run dev
 
-# Start frontend server (when available)
-cd ../frontend
+# Frontend (when available)
 npm start
 ```
 
-## 🧪 Testing
+## Documentation
 
-```bash
-# Run backend tests
-cd backend
-npm test
+- [API Documentation](./docs/api.md)
+- [Database Schema](./docs/database-schema.md)
+- [Development Guide](./docs/development-guide.md)
+- [Deployment Guide](./docs/deployment-guide.md)
 
-# Run with coverage
-npm run test:coverage
-```
+## Project Status Badges
 
-## 📚 Documentation
+![CI/CD](https://github.com/your-username/bpm-platform/workflows/CI/CD%20Pipeline/badge.svg)
+![Development Status](https://img.shields.io/badge/status-in%20development-yellow)
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
 
-- [API Documentation](docs/api.md)
-- [Database Schema](docs/database-schema.md)
-- [Development Guide](docs/development-guide.md)
-- [Deployment Guide](docs/deployment-guide.md)
-
-## 🔒 Security
-
-- JWT-based authentication
-- HTTPS/SSL encryption
-- Input validation and sanitization
-- OWASP security best practices
-- Regular security audits
-
-## 🌟 Contributing
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-## 📄 License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 👥 Authors
+---
 
-- Furkan Ucan - _Initial work_ - [furkan-ucan](https://github.com/furkan-ucan)
-
-## 🙏 Acknowledgments
-
-- BPMN.io for the process modeling engine
-- MongoDB team for the excellent database
-- All contributors who have helped this project grow
-
-## 📞 Support
-
-For support, please open an issue in the GitHub repository or contact the maintainers directly.
-
-## 🗺️ Roadmap
-
-- [ ] Complete initial backend implementation
-- [ ] Develop frontend UI
-- [ ] Implement real-time collaboration
-- [ ] Add advanced reporting features
-- [ ] Integrate with popular third-party services
-- [ ] Enhance security features
-- [ ] Add more process templates
-- [ ] Implement AI-powered process optimization
+⚠️ **Note**: This project is under active development. Features and documentation are being continuously updated. Stay tuned for updates!
