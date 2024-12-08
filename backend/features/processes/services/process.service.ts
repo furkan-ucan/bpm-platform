@@ -13,6 +13,8 @@ import { logger } from "@/shared/utils/logger.js";
 
 import { type ProcessStatus } from "../types/process.types.js";
 import { convertProcessToDTO } from "../utils/process.utils.js";
+import { parseBPMNXml } from "@/core/bpmn/parsers/bpmn-parser.js";
+import { type ProcessContext } from "@/core/bpmn/types/process.types.js";
 
 export class ProcessService {
   constructor(
@@ -20,43 +22,24 @@ export class ProcessService {
     private readonly bpmnEngine: BPMNEngine
   ) {}
 
-  public async createProcess(data: CreateProcessDTO, userId: Types.ObjectId) {
+  public async createProcess(processDTO: CreateProcessDTO, userId: Types.ObjectId) {
     try {
-      const process = await this.processRepository.create(data, userId);
-
-      const parsedBPMN: ParsedBPMN = {
-        id: process._id.toString(),
-        name: process.name,
-        elements: [
-          {
-            id: "StartEvent_1",
-            type: "startEvent",
-            name: "Başlangıç",
-            outgoing: [],
-          },
-        ],
-      };
-
-      const instance = await this.bpmnEngine.startProcess(parsedBPMN, {
-        processId: process._id,
-        userId,
-      });
-
-      const processDTO = convertProcessToDTO(process);
+      const process = await this.processRepository.create(processDTO, userId);
+      const instance = await this.startProcess(process._id, userId);
+      
       return {
         ...processDTO,
+        id: process._id.toString(),
         instanceId: instance.id,
+        status: process.status,
+        createdBy: userId.toString()
       };
     } catch (error: unknown) {
       logger.error("Süreç oluşturma hatası:", {
         error,
-        processName: data.name,
-        userId: userId.toString(),
+        processName: processDTO.name,
+        userId: userId.toString()
       });
-
-      if (error instanceof Error && error.name === "ValidationError") {
-        throw new ValidationError("Geçersiz süreç verisi");
-      }
       throw error;
     }
   }
@@ -64,29 +47,28 @@ export class ProcessService {
   public async getProcessById(id: string) {
     try {
       const process = await this.processRepository.findById(id);
-
       if (!process) {
         throw new ValidationError(`${id} ID'li süreç bulunamadı`);
       }
 
-      let engineStatus = "unknown";
+      const instanceId = `PROC_${process._id.toString()}`;
+      let engineStatus;
+      
       try {
-        engineStatus = this.bpmnEngine.getInstanceStatus(
-          `PROC_${process._id.toString()}`
-        );
-      } catch (error: unknown) {
+        engineStatus = await this.bpmnEngine.getInstanceStatus(instanceId);
+      } catch (error) {
         logger.warn("Motor durum hatası:", {
           error,
           processId: id,
-          timestamp: new Date().toISOString(),
+          timestamp: new Date()
         });
         engineStatus = "not_started";
       }
 
-      const processDTO = convertProcessToDTO(process);
       return {
-        ...processDTO,
-        engineStatus,
+        ...(process as any),
+        id: process._id.toString(),
+        engineStatus
       };
     } catch (error: unknown) {
       if (error instanceof Error && error.name === "CastError") {
@@ -189,5 +171,30 @@ export class ProcessService {
       }
       throw error;
     }
+  }
+
+  public async startProcess(processId: Types.ObjectId, userId: Types.ObjectId) {
+    const process = await this.processRepository.findById(processId.toString());
+    if (!process) {
+      throw new ValidationError("Süreç bulunamadı");
+    }
+
+    const context: ProcessContext = {
+      processId: processId.toString(),
+      userId: userId.toString(),
+      variables: {}
+    };
+
+    const instance = await this.bpmnEngine.startProcess(
+      parseBPMNXml(process.bpmnXml),
+      context
+    );
+
+    return instance;
+  }
+
+  public async getProcessStatus(processId: string): Promise<string> {
+    const instance = await this.bpmnEngine.getInstanceStatus(processId);
+    return instance.status;
   }
 }

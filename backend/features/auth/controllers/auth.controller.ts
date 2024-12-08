@@ -9,7 +9,7 @@ import { type AuthService } from '../services/auth.service.js';
 import { type TokenService } from '../services/token.service.js';
 
 export interface AuthenticatedRequest extends Request {
-    user: Document<unknown, unknown, IUser> & IUser;
+    user: Document<unknown, unknown, IUser> & IUser & { id: string };
 }
 
 export class AuthController {

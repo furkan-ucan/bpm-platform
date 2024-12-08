@@ -1,5 +1,6 @@
 {
   "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
     "mongodb-memory-server": "^10.1.2"
   }
 }

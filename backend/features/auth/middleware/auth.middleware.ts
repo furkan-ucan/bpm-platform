@@ -7,9 +7,11 @@ import { AuthenticationError, AuthorizationError } from '@/shared/errors/types/a
 import { User, type IUser } from '../models/user.model';
 
 export interface AuthenticatedRequest extends Request {
-    user: Document<unknown, any, IUser> & IUser & {
-        _id: Types.ObjectId;
-    };
+    user: Document<unknown, unknown, IUser> & 
+          IUser & {
+            _id: Types.ObjectId;
+            id: string;
+          };
 }
 
 export const authenticate = async (
@@ -31,10 +33,20 @@ export const authenticate = async (
             throw new AuthenticationError('Kullanıcı bulunamadı veya aktif değil');
         }
 
-        (req as AuthenticatedRequest).user = user;
+        const userDoc = user as Document<unknown, unknown, IUser> & IUser & {
+            _id: Types.ObjectId;
+            id: string;
+        };
+
+        (req as AuthenticatedRequest).user = userDoc;
+
         next();
     } catch (error) {
-        next(error);
+        if (error instanceof AuthenticationError) {
+            next(error);
+        } else {
+            next(new AuthenticationError('Kimlik doğrulama hatası'));
+        }
     }
 };
 
@@ -42,13 +54,13 @@ export const authorize = (...roles: string[]) => {
     return (req: Request, res: Response, next: NextFunction) => {
         const authReq = req as AuthenticatedRequest;
         if (!authReq.user) {
-            return next(new AuthenticationError());
+            return next(new AuthenticationError('Kimlik doğrulaması gerekli'));
         }
 
         if (!roles.includes(authReq.user.role)) {
-            return next(new AuthorizationError());
+            return next(new AuthorizationError('Bu işlem için yetkiniz yok'));
         }
 
         next();
     };
-}; 
+};

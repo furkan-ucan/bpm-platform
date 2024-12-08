@@ -1,7 +1,6 @@
-import { expect } from 'vitest'
 import { Types } from "mongoose";
 
-export function toBeValidId(received: any): jest.CustomMatcherResult {
+export function toBeValidId(received: string | Types.ObjectId): { message: () => string; pass: boolean } {
   const pass = Types.ObjectId.isValid(received);
 
   return {
@@ -14,7 +13,7 @@ export function toBeValidId(received: any): jest.CustomMatcherResult {
 }
 
 declare module 'vitest' {
-  interface Assertion<T = any> {
-    toBeValidId(): T
+  interface Assertion {
+    toBeValidId(): Assertion;
   }
 }

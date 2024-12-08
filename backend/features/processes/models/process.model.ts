@@ -1,28 +1,23 @@
-import { Schema, model, type Document, type Types } from "mongoose";
+import { Schema, model, type Types } from "mongoose";
+import { type ProcessStatus, ProcessStatus as ProcessStatusEnum } from '../types/process.types';
+import { type ProcessStep } from '../types/process.types';
 
-export interface IProcessStep {
-  name: string;
-  type: "task" | "approval" | "notification";
-  status: "pending" | "completed" | "rejected";
-  assignedTo?: Types.ObjectId;
-  dueDate?: Date;
-}
-
-export interface IProcess extends Document {
+export interface IProcess {
   _id: Types.ObjectId;
   name: string;
   description?: string;
-  status: "active" | "inactive" | "archived" | "completed";
+  bpmnXml: string;
+  status: ProcessStatus;
   isTemplate: boolean;
-  steps: IProcessStep[];
+  version: number;
+  steps: ProcessStep[];
   createdBy: Types.ObjectId;
   updatedBy?: Types.ObjectId;
-  version: number;
   createdAt: Date;
   updatedAt: Date;
 }
 
-const processStepSchema = new Schema<IProcessStep>({
+const ProcessStepSchema = new Schema<ProcessStep>({
   name: { type: String, required: true },
   type: {
     type: String,
@@ -38,44 +33,44 @@ const processStepSchema = new Schema<IProcessStep>({
   dueDate: { type: Date },
 });
 
-const processSchema = new Schema<IProcess>(
-  {
-    name: {
-      type: String,
-      required: true,
-      maxlength: 100,
-    },
-    description: {
-      type: String,
-      maxlength: 500,
-    },
-    status: {
-      type: String,
-      enum: ["active", "inactive", "archived", "completed"],
-      default: "active",
-    },
-    isTemplate: {
-      type: Boolean,
-      default: false,
-    },
-    steps: [processStepSchema],
-    createdBy: {
-      type: Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
-    updatedBy: {
-      type: Schema.Types.ObjectId,
-      ref: "User",
-    },
-    version: {
-      type: Number,
-      default: 1,
-    },
+const ProcessSchema = new Schema<IProcess>({
+  name: { 
+    type: String, 
+    required: true,
+    unique: true 
   },
-  {
-    timestamps: true,
+  description: { 
+    type: String 
+  },
+  bpmnXml: {
+    type: String,
+    required: true
+  },
+  status: { 
+    type: String,
+    enum: Object.values(ProcessStatusEnum),
+    default: ProcessStatusEnum.ACTIVE
+  },
+  isTemplate: {
+    type: Boolean,
+    default: false
+  },
+  version: {
+    type: Number,
+    default: 1
+  },
+  steps: [ProcessStepSchema],
+  createdBy: { 
+    type: Schema.Types.ObjectId,
+    ref: 'User',
+    required: true 
+  },
+  updatedBy: { 
+    type: Schema.Types.ObjectId,
+    ref: 'User'
   }
-);
+}, {
+  timestamps: true
+});
 
-export const Process = model<IProcess>("Process", processSchema);
+export const Process = model<IProcess>('Process', ProcessSchema);

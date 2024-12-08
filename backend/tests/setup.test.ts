@@ -1,6 +1,5 @@
-// backend/tests/setup.test.ts
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { Types } from "mongoose";
+/// <reference types="node" />
+import { describe, it, expect, vi } from 'vitest';
 
 import { toBeValidId } from "./customMatchers";
 

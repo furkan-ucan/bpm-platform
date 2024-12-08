@@ -1,8 +1,7 @@
-import { type Response, type NextFunction, RequestHandler } from 'express';
-import { Types } from 'mongoose';
+import { type Response, type NextFunction } from 'express';
 
 import { type AuthenticatedRequest } from '@/features/auth/middleware/auth.middleware';
-import { UnauthorizedError } from '@/shared/errors/types/app-error';
+import { AuthenticationError } from '@/shared/errors/types/app-error';
 import { type CreateTaskDTO, type UpdateTaskDTO, type TaskFilterDTO } from '@/shared/types/dtos/task.dto';
 
 import { type TaskService } from '../services/task.service';
@@ -19,7 +18,7 @@ export class TaskController {
     public createTask: AuthHandler = async (req, res, next) => {
         try {
             if (!req.user) {
-                throw new UnauthorizedError('Unauthorized');
+                throw new AuthenticationError('Unauthorized');
             }
             const taskData: CreateTaskDTO = req.body;
             const task = await this.taskService.createTask(taskData, req.user._id);
@@ -36,7 +35,7 @@ export class TaskController {
     public updateTaskStatus: AuthHandler = async (req, res, next) => {
         try {
             if (!req.user) {
-                throw new UnauthorizedError('Unauthorized');
+                throw new AuthenticationError('Unauthorized');
             }
             const task = await this.taskService.updateTaskStatus(
                 req.params.id,
@@ -82,7 +81,7 @@ export class TaskController {
     public updateTask: AuthHandler = async (req, res, next) => {
         try {
             if (!req.user) {
-                throw new UnauthorizedError('Unauthorized');
+                throw new AuthenticationError('Unauthorized');
             }
             const updateData: UpdateTaskDTO = req.body;
             const task = await this.taskService.updateTask(
@@ -111,4 +110,4 @@ export class TaskController {
             next(error);
         }
     };
-} 
+}
