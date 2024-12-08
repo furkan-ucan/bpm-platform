@@ -1,117 +1,211 @@
-# BPM Platform API Documentation
+# API Documentation
 
-## API Overview
+## Overview
 
-Base URL: `https://api.bpm-platform.com/v1`
+The BPM Platform API is organized around REST. Our API accepts JSON-encoded request bodies, returns JSON-encoded responses, and uses standard HTTP response codes and authentication.
+
+## Base URL
+
+```
+Production: https://api.bpm-platform.com/v1
+Development: http://localhost:3000/v1
+```
 
 ## Authentication
 
-All API requests require authentication using JWT tokens.
+The API uses JWT (JSON Web Tokens) for authentication. Include the token in the Authorization header:
 
-### Authentication Header
-```
-Authorization: Bearer <token>
-```
-
-## Endpoints
-
-### Process Management
-
-#### Create Process
 ```http
-POST /processes
-Content-Type: application/json
-
-{
-  "name": "Invoice Approval",
-  "description": "Process for approving invoices",
-  "bpmnXml": "<?xml version=\"1.0\"...>"
-}
+Authorization: Bearer YOUR_JWT_TOKEN
 ```
 
-#### Get Process
-```http
-GET /processes/{processId}
-```
+## API Endpoints
 
-#### List Processes
-```http
-GET /processes
-```
+### Authentication
 
-### Task Management
+#### POST /auth/login
+Login with email and password.
 
-#### Create Task
-```http
-POST /tasks
-Content-Type: application/json
-
-{
-  "processId": "123",
-  "name": "Review Invoice",
-  "assignee": "user123",
-  "dueDate": "2024-12-31T23:59:59Z"
-}
-```
-
-#### Get Task
-```http
-GET /tasks/{taskId}
-```
-
-#### List Tasks
-```http
-GET /tasks
-```
-
-### User Management
-
-#### Create User
-```http
-POST /users
-Content-Type: application/json
-
+**Request Body:**
+```json
 {
   "email": "user@example.com",
-  "name": "John Doe",
-  "role": "admin"
+  "password": "your_password"
 }
 ```
 
-#### Get User
-```http
-GET /users/{userId}
+**Response:**
+```json
+{
+  "token": "jwt_token",
+  "user": {
+    "id": "user_id",
+    "email": "user@example.com",
+    "name": "User Name",
+    "role": "admin"
+  }
+}
+```
+
+### Processes
+
+#### GET /processes
+List all processes.
+
+**Query Parameters:**
+- `page` (optional): Page number for pagination
+- `limit` (optional): Number of items per page
+- `status` (optional): Filter by process status
+- `category` (optional): Filter by category
+
+**Response:**
+```json
+{
+  "data": [
+    {
+      "id": "process_id",
+      "name": "Process Name",
+      "description": "Process Description",
+      "status": "active",
+      "version": 1,
+      "created_at": "2023-12-08T00:00:00Z"
+    }
+  ],
+  "pagination": {
+    "total": 100,
+    "page": 1,
+    "limit": 10
+  }
+}
+```
+
+#### POST /processes
+Create a new process.
+
+**Request Body:**
+```json
+{
+  "name": "New Process",
+  "description": "Process Description",
+  "bpmn_data": "BPMN XML Data",
+  "category": "category_name",
+  "tags": ["tag1", "tag2"]
+}
+```
+
+### Activities
+
+#### GET /processes/{processId}/activities
+List all activities in a process.
+
+**Path Parameters:**
+- `processId`: ID of the process
+
+**Response:**
+```json
+{
+  "data": [
+    {
+      "id": "activity_id",
+      "name": "Activity Name",
+      "type": "task",
+      "status": "pending",
+      "assigned_to": "user_id",
+      "due_date": "2023-12-31T00:00:00Z"
+    }
+  ]
+}
+```
+
+### Tasks
+
+#### PUT /tasks/{taskId}
+Update a task status.
+
+**Path Parameters:**
+- `taskId`: ID of the task
+
+**Request Body:**
+```json
+{
+  "status": "completed",
+  "comments": "Task completed successfully"
+}
 ```
 
 ## Error Handling
 
-### Error Response Format
+The API uses conventional HTTP response codes:
+
+- 200: Success
+- 201: Created
+- 400: Bad Request
+- 401: Unauthorized
+- 403: Forbidden
+- 404: Not Found
+- 500: Internal Server Error
+
+Error Response Format:
 ```json
 {
   "error": {
     "code": "ERROR_CODE",
-    "message": "Human readable message",
+    "message": "Error description",
     "details": {}
   }
 }
 ```
 
-### Common Error Codes
-- `AUTH_REQUIRED`: Authentication required
-- `INVALID_TOKEN`: Invalid authentication token
-- `NOT_FOUND`: Resource not found
-- `VALIDATION_ERROR`: Invalid input data
-- `PERMISSION_DENIED`: Insufficient permissions
-
 ## Rate Limiting
 
-- Rate limit: 1000 requests per hour
-- Rate limit header: `X-RateLimit-Remaining`
+API calls are limited to:
+- 100 requests per minute for authenticated users
+- 20 requests per minute for unauthenticated users
 
-## Versioning
+Rate limit headers are included in all responses:
+```http
+X-RateLimit-Limit: 100
+X-RateLimit-Remaining: 95
+X-RateLimit-Reset: 1628785200
+```
 
-The API is versioned using URL path versioning. The current version is `v1`.
+## Webhooks
 
-## Testing
+The API supports webhooks for real-time notifications:
 
-Test environment: `https://api-test.bpm-platform.com/v1`
+#### POST /webhooks
+Register a new webhook.
+
+**Request Body:**
+```json
+{
+  "url": "https://your-domain.com/webhook",
+  "events": ["process.created", "task.completed"],
+  "active": true
+}
+```
+
+## SDK & Examples
+
+Code examples are available in multiple languages:
+
+### Node.js
+```javascript
+const BPMPlatform = require('bpm-platform-sdk');
+const client = new BPMPlatform('YOUR_API_KEY');
+
+// List processes
+client.processes.list()
+  .then(processes => console.log(processes))
+  .catch(error => console.error(error));
+```
+
+### Python
+```python
+from bpm_platform import BPMPlatform
+client = BPMPlatform('YOUR_API_KEY')
+
+# List processes
+processes = client.processes.list()
+print(processes)
+```
