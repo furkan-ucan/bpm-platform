@@ -1,0 +1,649 @@
+{
+  "info": {
+    "name": "BPM Platform API",
+    "description": "Cloud Based Business Process Management Platform API Collection",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "description": "Kimlik doğrulama endpointleri",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n\t\"email\": \"test@example.com\",\n\t\"password\": \"123456\",\n\t\"firstName\": \"Test\",\n\t\"lastName\": \"User\"\n}"
+            }
+          },
+          "response": [
+            {
+              "name": "Başarılı Kayıt",
+              "originalRequest": {
+                "method": "POST",
+                "url": "{{baseUrl}}/auth/register"
+              },
+              "status": "Created",
+              "code": 201,
+              "body": "{\n\t\"status\": \"success\",\n\t\"data\": {\n\t\t\"user\": {\n\t\t\t\"id\": \"65f2e1234567890abcdef123\",\n\t\t\t\"email\": \"test@example.com\",\n\t\t\t\"firstName\": \"Test\",\n\t\t\t\"lastName\": \"User\",\n\t\t\t\"role\": \"user\"\n\t\t},\n\t\t\"tokens\": {\n\t\t\t\"accessToken\": \"eyJhbG...\",\n\t\t\t\"refreshToken\": \"eyJhbG...\",\n\t\t\t\"expiresIn\": 3600\n\t\t}\n\t}\n}"
+            }
+          ]
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n\t\"email\": \"test@example.com\",\n\t\"password\": \"123456\"\n}"
+            }
+          },
+          "response": [
+            {
+              "name": "Başarılı Giriş",
+              "originalRequest": {
+                "method": "POST",
+                "url": "{{baseUrl}}/auth/login"
+              },
+              "status": "OK",
+              "code": 200,
+              "body": "{\n\t\"status\": \"success\",\n\t\"data\": {\n\t\t\"user\": {\n\t\t\t\"id\": \"65f2e1234567890abcdef123\",\n\t\t\t\"email\": \"test@example.com\",\n\t\t\t\"firstName\": \"Test\",\n\t\t\t\"lastName\": \"User\",\n\t\t\t\"role\": \"user\"\n\t\t},\n\t\t\"tokens\": {\n\t\t\t\"accessToken\": \"eyJhbG...\",\n\t\t\t\"refreshToken\": \"eyJhbG...\",\n\t\t\t\"expiresIn\": 3600\n\t\t}\n\t}\n}"
+            }
+          ]
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/refresh-token",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n\t\"refreshToken\": \"{{refreshToken}}\"\n}"
+            }
+          },
+          "response": [
+            {
+              "name": "Başarılı Token Yenileme",
+              "originalRequest": {
+                "method": "POST",
+                "url": "{{baseUrl}}/auth/refresh-token"
+              },
+              "status": "OK",
+              "code": 200,
+              "body": "{\n\t\"status\": \"success\",\n\t\"data\": {\n\t\t\"tokens\": {\n\t\t\t\"accessToken\": \"eyJhbG...\",\n\t\t\t\"refreshToken\": \"eyJhbG...\",\n\t\t\t\"expiresIn\": 3600\n\t\t}\n\t}\n}"
+            }
+          ]
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/logout"
+          },
+          "response": [
+            {
+              "name": "Başarılı Çıkış",
+              "originalRequest": {
+                "method": "POST",
+                "url": "{{baseUrl}}/auth/logout"
+              },
+              "status": "OK",
+              "code": 200,
+              "body": "{\n\t\"status\": \"success\",\n\t\"message\": \"Başarıyla çıkış yapıldı\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Processes",
+      "description": "Süreç yönetimi endpointleri",
+      "item": [
+        {
+          "name": "Create Process",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/processes",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n\t\"name\": \"Yeni Süreç\",\n\t\"description\": \"Süreç açıklaması\",\n\t\"bpmnXml\": \"<?xml version=\\\"1.0\\\" encoding=\\\"UTF-8\\\"?>\\n<bpmn:definitions...>\"\n}"
+            }
+          },
+          "response": [
+            {
+              "name": "Başarılı Süreç Oluşturma",
+              "originalRequest": {
+                "method": "POST",
+                "url": "{{baseUrl}}/processes"
+              },
+              "status": "Created",
+              "code": 201
+            }
+          ]
+        },
+        {
+          "name": "Get Processes",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/processes?status=active&page=0&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["processes"],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "active"
+                },
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Başarılı Süreç Listesi",
+              "originalRequest": {
+                "method": "GET",
+                "url": "{{baseUrl}}/processes"
+              },
+              "status": "OK",
+              "code": 200,
+              "body": {
+                "status": "success",
+                "data": {
+                  "processes": [
+                    {
+                      "id": "65707b8a9a5d2b1234567890",
+                      "name": "Yeni Süreç",
+                      "description": "Süreç açıklaması",
+                      "status": "active",
+                      "createdAt": "2024-12-06T10:00:00.000Z",
+                      "updatedAt": "2024-12-06T10:00:00.000Z"
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete Process",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/processes/:id"
+          },
+          "response": [
+            {
+              "name": "Başarılı Süreç Silme",
+              "originalRequest": {
+                "method": "DELETE",
+                "url": "{{baseUrl}}/processes/:id"
+              },
+              "status": "OK",
+              "code": 200,
+              "body": {
+                "status": "success",
+                "message": "Süreç başarıyla silindi"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update Process",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/processes/:id",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n\t\"name\": \"Güncellenmiş Süreç\",\n\t\"description\": \"Güncellenmiş açıklama\",\n\t\"status\": \"inactive\"\n}"
+            }
+          },
+          "response": [
+            {
+              "name": "Başarılı Süreç Güncelleme",
+              "originalRequest": {
+                "method": "PUT",
+                "url": "{{baseUrl}}/processes/:id"
+              },
+              "status": "OK",
+              "code": 200,
+              "body": {
+                "status": "success",
+                "data": {
+                  "process": {
+                    "id": "65707b8a9a5d2b1234567890",
+                    "name": "Güncellenmiş Süreç",
+                    "description": "Güncellenmiş açıklama",
+                    "status": "inactive",
+                    "updatedAt": "2024-12-06T11:00:00.000Z"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Process By Id",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/processes/:id"
+          },
+          "response": [
+            {
+              "name": "Başarılı Süreç Detayı",
+              "originalRequest": {
+                "method": "GET",
+                "url": "{{baseUrl}}/processes/:id"
+              },
+              "status": "OK",
+              "code": 200,
+              "body": {
+                "status": "success",
+                "data": {
+                  "process": {
+                    "id": "65707b8a9a5d2b1234567890",
+                    "name": "Yeni Süreç",
+                    "description": "Süreç açıklaması",
+                    "status": "active",
+                    "steps": [
+                      {
+                        "name": "Task 1",
+                        "type": "task",
+                        "status": "pending"
+                      }
+                    ],
+                    "createdAt": "2024-12-06T10:00:00.000Z",
+                    "updatedAt": "2024-12-06T10:00:00.000Z"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Tasks",
+      "description": "Görev yönetimi endpointleri",
+      "item": [
+        {
+          "name": "Create Task",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/tasks",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n\t\"name\": \"Yeni Görev\",\n\t\"processId\": \"{{processId}}\",\n\t\"stepId\": \"{{stepId}}\",\n\t\"description\": \"Görev açıklaması\",\n\t\"priority\": \"medium\",\n\t\"assignee\": \"{{userId}}\",\n\t\"dueDate\": \"2024-04-01T00:00:00.000Z\"\n}"
+            }
+          },
+          "response": [
+            {
+              "name": "Başarılı Görev Oluşturma",
+              "originalRequest": {
+                "method": "POST",
+                "url": "{{baseUrl}}/tasks"
+              },
+              "status": "Created",
+              "code": 201,
+              "body": {
+                "status": "success",
+                "data": {
+                  "task": {
+                    "id": "65f2e1234567890abcdef123",
+                    "name": "Yeni Görev",
+                    "description": "Görev açıklaması",
+                    "status": "pending",
+                    "priority": "medium",
+                    "assignee": {
+                      "id": "65f2e1234567890abcdef124",
+                      "name": "Test User",
+                      "email": "test@example.com"
+                    },
+                    "processId": "65f2e1234567890abcdef125",
+                    "stepId": "step1",
+                    "dueDate": "2024-04-01T00:00:00.000Z",
+                    "createdAt": "2024-03-14T10:00:00.000Z",
+                    "updatedAt": "2024-03-14T10:00:00.000Z"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Tasks",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tasks?status=pending&priority=high&processId={{processId}}&fromDate=2024-01-01&toDate=2024-12-31&page=0&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["tasks"],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "pending",
+                  "description": "Görev durumu"
+                },
+                {
+                  "key": "priority",
+                  "value": "high",
+                  "description": "Öncelik"
+                },
+                {
+                  "key": "processId",
+                  "value": "{{processId}}",
+                  "description": "Süreç ID"
+                },
+                {
+                  "key": "fromDate",
+                  "value": "2024-01-01",
+                  "description": "Başlangıç tarihi"
+                },
+                {
+                  "key": "toDate",
+                  "value": "2024-12-31",
+                  "description": "Bitiş tarihi"
+                },
+                {
+                  "key": "page",
+                  "value": "0",
+                  "description": "Sayfa numarası"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Sayfa başına kayıt"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Başarılı Görev Listesi",
+              "status": "OK",
+              "code": 200,
+              "body": {
+                "status": "success",
+                "data": {
+                  "tasks": [
+                    {
+                      "id": "65f2e1234567890abcdef123",
+                      "name": "Yeni Görev",
+                      "description": "Görev açıklaması",
+                      "status": "pending",
+                      "priority": "high",
+                      "assignee": {
+                        "id": "65f2e1234567890abcdef124",
+                        "name": "Test User",
+                        "email": "test@example.com"
+                      },
+                      "processId": "65f2e1234567890abcdef125",
+                      "stepId": "step1",
+                      "dueDate": "2024-04-01T00:00:00.000Z",
+                      "createdAt": "2024-03-14T10:00:00.000Z",
+                      "updatedAt": "2024-03-14T10:00:00.000Z"
+                    }
+                  ],
+                  "pagination": {
+                    "total": 1,
+                    "page": 0,
+                    "limit": 10,
+                    "pages": 1
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Task By Id",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/tasks/{{taskId}}"
+          },
+          "response": [
+            {
+              "name": "Başarılı Görev Detayı",
+              "status": "OK",
+              "code": 200,
+              "body": {
+                "status": "success",
+                "data": {
+                  "task": {
+                    "id": "65f2e1234567890abcdef123",
+                    "name": "Yeni Görev",
+                    "description": "Görev açıklaması",
+                    "status": "pending",
+                    "priority": "medium",
+                    "assignee": {
+                      "id": "65f2e1234567890abcdef124",
+                      "name": "Test User",
+                      "email": "test@example.com"
+                    },
+                    "processId": "65f2e1234567890abcdef125",
+                    "stepId": "step1",
+                    "dueDate": "2024-04-01T00:00:00.000Z",
+                    "createdAt": "2024-03-14T10:00:00.000Z",
+                    "updatedAt": "2024-03-14T10:00:00.000Z"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update Task",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/tasks/{{taskId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n\t\"name\": \"Güncellenmiş Görev\",\n\t\"description\": \"Güncellenmiş açıklama\",\n\t\"priority\": \"high\",\n\t\"assignee\": \"{{userId}}\",\n\t\"dueDate\": \"2024-05-01T00:00:00.000Z\"\n}"
+            }
+          },
+          "response": [
+            {
+              "name": "Başarılı Görev Güncelleme",
+              "status": "OK",
+              "code": 200,
+              "body": {
+                "status": "success",
+                "data": {
+                  "task": {
+                    "id": "65f2e1234567890abcdef123",
+                    "name": "Güncellenmiş Görev",
+                    "description": "Güncellenmiş açıklama",
+                    "status": "pending",
+                    "priority": "high",
+                    "assignee": {
+                      "id": "65f2e1234567890abcdef124",
+                      "name": "Test User",
+                      "email": "test@example.com"
+                    },
+                    "processId": "65f2e1234567890abcdef125",
+                    "stepId": "step1",
+                    "dueDate": "2024-05-01T00:00:00.000Z",
+                    "updatedAt": "2024-03-14T11:00:00.000Z"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update Task Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/tasks/{{taskId}}/status",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n\t\"status\": \"completed\"\n}"
+            }
+          },
+          "response": [
+            {
+              "name": "Başarılı Durum Güncelleme",
+              "status": "OK",
+              "code": 200,
+              "body": {
+                "status": "success",
+                "data": {
+                  "task": {
+                    "id": "65f2e1234567890abcdef123",
+                    "status": "completed",
+                    "completedAt": "2024-03-14T11:00:00.000Z",
+                    "updatedAt": "2024-03-14T11:00:00.000Z"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete Task",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/tasks/{{taskId}}"
+          },
+          "response": [
+            {
+              "name": "Başarılı Görev Silme",
+              "status": "OK",
+              "code": 200,
+              "body": {
+                "status": "success",
+                "message": "Görev başarıyla silindi"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000/api/v1"
+    }
+  ]
+} 
