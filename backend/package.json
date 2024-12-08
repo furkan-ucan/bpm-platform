@@ -8,7 +8,7 @@
     "start": "node dist/api/server.js",
     "dev": "tsx watch api/server.ts",
     "build": "tsc && tsc-alias",
-    "test": "vitest",
+    "test": "vitest --config=vitest.config.ts --coverage",
     "test:watch": "vitest watch",
     "test:coverage": "vitest run --coverage",
     "test:ui": "vitest --ui",

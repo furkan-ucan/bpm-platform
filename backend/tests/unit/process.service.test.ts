@@ -533,7 +533,7 @@ describe("ProcessService", () => {
 
       processRepository.findById.mockResolvedValue(process);
       processRepository.update.mockRejectedValue(
-        new ValidationError("Geçersiz durum geçişi")
+        new ValidationError(ERROR_MESSAGES.PROCESS_UPDATE_FAILED)
       );
 
       await expect(
