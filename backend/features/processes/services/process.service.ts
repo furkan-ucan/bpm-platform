@@ -15,6 +15,7 @@ import { type ProcessStatus } from "../types/process.types.js";
 import { convertProcessToDTO } from "../utils/process.utils.js";
 import { parseBPMNXml } from "@/core/bpmn/parsers/bpmn-parser.js";
 import { type ProcessContext } from "@/core/bpmn/types/process.types.js";
+import { ProcessInstanceStatus } from "@/core/bpmn/types/process.types.js";
 
 export class ProcessService {
   constructor(
@@ -146,12 +147,15 @@ export class ProcessService {
         throw new ValidationError(`${id} ID'li süreç bulunamadı`);
       }
 
-      const instanceId = `PROC_${process._id.toString()}`;
-      await this.bpmnEngine.updateInstanceStatus(instanceId, status);
-
       if (!["active", "inactive", "archived"].includes(status)) {
         throw new ValidationError("Geçersiz süreç durumu");
       }
+
+      const instanceId = `PROC_${process._id.toString()}`;
+      await this.bpmnEngine.updateInstanceStatus(
+        instanceId, 
+        status.toUpperCase() as ProcessInstanceStatus
+      );
 
       await this.processRepository.update(
         id,

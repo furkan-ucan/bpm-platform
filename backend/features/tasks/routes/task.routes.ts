@@ -1,6 +1,6 @@
 import { Router, type RequestHandler, type Response, type NextFunction } from 'express';
 
-import { BPMNEngine } from '@/core/bpmn/engine/bpmn-engine';
+import { BPMNEngineImpl } from '@/core/bpmn/engine/bpmn-engine';
 import { authenticate , type AuthenticatedRequest } from '@/features/auth/middleware/auth.middleware';
 import { TaskRepository } from '@/infrastructure/database/mongodb/repositories/TaskRepository';
 
@@ -21,7 +21,7 @@ type AuthRequestHandler = (
 
 const router = Router();
 const taskRepository = new TaskRepository();
-const bpmnEngine = new BPMNEngine();
+const bpmnEngine = new BPMNEngineImpl();
 const taskService = new TaskService(taskRepository, bpmnEngine);
 const taskController = new TaskController(taskService);
 

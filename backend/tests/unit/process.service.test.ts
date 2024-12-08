@@ -1,5 +1,5 @@
 import { type Document, Types } from 'mongoose';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest';
 import { type BPMNEngine } from "@/core/bpmn/engine/bpmn-engine";
 import { type ProcessFilterDTO } from "@/features/processes/dtos/process-filter.dto";
 import { type IProcess } from "@/features/processes/models/process.model";
@@ -8,28 +8,28 @@ import { ProcessService } from "@/features/processes/services/process.service";
 import { type BPMNProcessDefinition } from "@/features/processes/types/process.types";
 import { ERROR_MESSAGES } from "@/core/constants/error-messages";
 import { createMockProcess } from '../helpers/process.fixtures';
+import { ValidationError } from '@/shared/errors/types/app-error';
 
-// Test interface'ini güncelle
 interface MockRepository {
-  findById: ReturnType<typeof vi.fn>;
-  findByName: ReturnType<typeof vi.fn>;
-  find: ReturnType<typeof vi.fn>;
-  findAll: ReturnType<typeof vi.fn>;
-  create: ReturnType<typeof vi.fn>;
-  update: ReturnType<typeof vi.fn>;
-  updateStatus: ReturnType<typeof vi.fn>;
-  delete: ReturnType<typeof vi.fn>;
-  exists: ReturnType<typeof vi.fn>;
+  findById: Mock;
+  findByName: Mock;
+  find: Mock;
+  findAll: Mock;
+  create: Mock;
+  update: Mock;
+  updateStatus: Mock;
+  delete: Mock;
+  exists: Mock;
 }
 
-interface MockBPMNEngine extends BPMNEngine {
-  deploy: ReturnType<typeof vi.fn>;
-  startInstance: ReturnType<typeof vi.fn>;
-  stopInstance: ReturnType<typeof vi.fn>;
-  updateInstanceStatus: ReturnType<typeof vi.fn>;
-  getInstanceStatus: ReturnType<typeof vi.fn>;
-  startProcess: ReturnType<typeof vi.fn>;
-  executeTask: ReturnType<typeof vi.fn>;
+interface MockBPMNEngine {
+  deploy: Mock;
+  startInstance: Mock;
+  stopInstance: Mock;
+  updateInstanceStatus: Mock;
+  getInstanceStatus: Mock;
+  startProcess: Mock;
+  executeTask: Mock;
   instances: Map<string, BPMNProcessDefinition>;
 }
 
@@ -59,8 +59,8 @@ describe("ProcessService", () => {
       update: vi.fn(),
       updateStatus: vi.fn(),
       delete: vi.fn(),
-      exists: vi.fn(),
-    };
+      exists: vi.fn()
+    } as MockRepository;
 
     bpmnEngine = {
       deploy: vi.fn(),
@@ -70,10 +70,20 @@ describe("ProcessService", () => {
       getInstanceStatus: vi.fn(),
       startProcess: vi.fn(),
       executeTask: vi.fn(),
-      instances: new Map(),
+      instances: new Map()
     } as MockBPMNEngine;
 
-    processService = new ProcessService(processRepository, bpmnEngine as BPMNEngine);
+    // ValidationError'ı import edelim
+    vi.mock('@/shared/errors/types/app-error', () => ({
+      ValidationError: class ValidationError extends Error {
+        constructor(message: string) {
+          super(message);
+          this.name = 'ValidationError';
+        }
+      }
+    }));
+
+    processService = new ProcessService(processRepository, bpmnEngine);
   });
 
   afterEach(() => {
@@ -402,11 +412,11 @@ describe("ProcessService", () => {
       expect(processRepository.findById).toHaveBeenCalledWith(mockProcessId);
       expect(bpmnEngine.updateInstanceStatus).toHaveBeenCalledWith(
         `PROC_${mockProcessId}`,
-        "inactive"
+        "INACTIVE"
       );
       expect(processRepository.update).toHaveBeenCalledWith(
         mockProcessId,
-        { status: "inactive" as ProcessStatus },
+        { status: "inactive" },
         mockProcess.createdBy
       );
     });
@@ -416,45 +426,36 @@ describe("ProcessService", () => {
 
       await expect(
         processService.updateProcessStatus(mockProcessId, "active"),
-      ).rejects.toThrow(Error);
+      ).rejects.toThrow(ValidationError);
     });
 
     it("should handle engine errors gracefully", async () => {
       const mockProcess = createMockProcess({
-        _id: new Types.ObjectId(),
-        status: ProcessStatus.DRAFT
-      });
-
-      processRepository.findById.mockResolvedValue(mockProcess);
-      bpmnEngine.updateInstanceStatus.mockRejectedValue(
-        new Error(ERROR_MESSAGES.ENGINE_ERROR),
-      );
-
-      await expect(
-        processService.updateProcessStatus(
-          mockProcessId,
-          "inactive" as ProcessStatus,
-        ),
-      ).rejects.toThrow(Error);
-    });
-
-    it("should throw ValidationError for invalid status transition", async () => {
-      const mockProcess = createMockProcess({
-        _id: new Types.ObjectId(),
+        _id: new Types.ObjectId(mockProcessId),
         status: ProcessStatus.ACTIVE
       });
 
       processRepository.findById.mockResolvedValue(mockProcess);
-      processRepository.update.mockRejectedValue(
-        new Error(ERROR_MESSAGES.PROCESS_UPDATE_FAILED)
+      bpmnEngine.updateInstanceStatus.mockRejectedValue(
+        new Error(ERROR_MESSAGES.ENGINE_ERROR)
       );
 
       await expect(
-        processService.updateProcessStatus(
-          mockProcess._id.toString(),
-          "invalid_status" as ProcessStatus,
-        ),
-      ).rejects.toThrow(Error);
+        processService.updateProcessStatus(mockProcessId, "inactive"),
+      ).rejects.toThrow(ERROR_MESSAGES.ENGINE_ERROR);
+    });
+
+    it("should throw ValidationError for invalid status", async () => {
+      const mockProcess = createMockProcess({
+        _id: new Types.ObjectId(mockProcessId),
+        status: ProcessStatus.ACTIVE
+      });
+
+      processRepository.findById.mockResolvedValue(mockProcess);
+
+      await expect(
+        processService.updateProcessStatus(mockProcessId, "invalid_status"),
+      ).rejects.toThrow(new ValidationError("Geçersiz süreç durumu"));
     });
   });
 
@@ -462,11 +463,20 @@ describe("ProcessService", () => {
     it("should return process status successfully", async () => {
       const mockProcessId = "test-process-id";
       bpmnEngine.getInstanceStatus.mockResolvedValue({ status: ProcessStatus.ACTIVE });
-      
+
       const result = await processService.getProcessStatus(mockProcessId);
-      
+
       expect(result).toBe(ProcessStatus.ACTIVE);
       expect(bpmnEngine.getInstanceStatus).toHaveBeenCalledWith(mockProcessId);
+    });
+
+    it("should handle engine status error gracefully", async () => {
+      const mockProcessId = new Types.ObjectId().toString();
+      bpmnEngine.getInstanceStatus.mockRejectedValue(new Error(ERROR_MESSAGES.ENGINE_ERROR));
+
+      await expect(
+        processService.getProcessStatus(mockProcessId)
+      ).rejects.toThrow(ERROR_MESSAGES.ENGINE_ERROR);
     });
   });
 });

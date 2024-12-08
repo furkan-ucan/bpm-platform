@@ -10,9 +10,11 @@ export class RedisCache {
 
   constructor() {
     this.client = createClient({
-      url: env.redis.url,
-      password: env.redis.password,
-      database: env.redis.db,
+      socket: {
+        host: env.redis.host,
+        port: env.redis.port
+      },
+      password: env.redis.password
     });
 
     this.setupEventHandlers();

@@ -1,7 +1,7 @@
 import cors from 'cors';
 
 import type { CorsOptions } from 'cors';
-import { type SecurityConfig } from '../index.js';
+import { type SecurityConfig } from '@/config';
 
 export function corsConfig(config: SecurityConfig['cors']): CorsOptions {
     return {
@@ -20,4 +20,4 @@ export function corsConfig(config: SecurityConfig['cors']): CorsOptions {
     };
 }
 
-export const corsMiddleware = cors(corsConfig({ allowedOrigins: process.env.ALLOWED_ORIGINS?.split(',') || '*' }));
+export const corsMiddleware = cors(corsConfig({ allowedOrigins: process.env.ALLOWED_ORIGINS?.split(',') || ['*'] }));

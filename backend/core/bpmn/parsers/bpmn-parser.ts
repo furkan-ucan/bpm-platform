@@ -3,6 +3,7 @@ export interface BPMNElement {
     type: string;
     name?: string;
     outgoing?: string[];
+    properties?: Record<string, any>;
 }
 
 export interface ParsedBPMN {

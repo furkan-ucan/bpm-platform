@@ -1,5 +1,9 @@
 import { defineConfig } from 'vitest/config'
-import path from 'path'
+import { fileURLToPath } from 'url'
+import { dirname } from 'path'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
 
 export default defineConfig({
   test: {
@@ -19,15 +23,15 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './'),
-      '@config': path.resolve(__dirname, './config'),
-      '@security': path.resolve(__dirname, './security'),
-      '@shared': path.resolve(__dirname, './shared'),
-      '@api': path.resolve(__dirname, './api'),
-      '@core': path.resolve(__dirname, './core'),
-      '@features': path.resolve(__dirname, './features'),
-      '@infrastructure': path.resolve(__dirname, './infrastructure'),
-      '@tests': path.resolve(__dirname, './tests')
+      '@': __dirname,
+      '@config': `${__dirname}/config`,
+      '@security': `${__dirname}/security`,
+      '@shared': `${__dirname}/shared`,
+      '@api': `${__dirname}/api`,
+      '@core': `${__dirname}/core`,
+      '@features': `${__dirname}/features`,
+      '@infrastructure': `${__dirname}/infrastructure`,
+      '@tests': `${__dirname}/tests`
     }
   }
 }) 

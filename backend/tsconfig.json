@@ -13,7 +13,7 @@
       "@/*": ["*"],
       "@config/*": ["config/*"]
     },
-    "types": ["node", "jest"]
+    "types": ["node", "vitest"]
   },
   "include": [
     "api/**/*.ts",
