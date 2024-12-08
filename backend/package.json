@@ -12,7 +12,7 @@
     "test:watch": "jest --watch --config jest.config.cjs",
     "test:coverage": "jest --coverage --config jest.config.cjs",
     "test:clear": "jest --clearCache",
-    "lint": "eslint . --ext .ts"
+    "lint": "eslint ."
   },
   "author": "",
   "license": "ISC",
