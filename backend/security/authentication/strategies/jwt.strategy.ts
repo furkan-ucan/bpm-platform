@@ -1,8 +1,9 @@
-import { Request, Response, NextFunction } from 'express';
-import jwt, { JwtPayload } from 'jsonwebtoken';
+import { type Request, type Response, type NextFunction } from 'express';
+import jwt, { type JwtPayload } from 'jsonwebtoken';
+
 import { config } from '@/config/env';
+import { type IUser } from '@/features/auth/models/user.model';
 import { AppError } from '@/shared/errors/types/app-error';
-import { IUser } from '@/features/auth/models/user.model';
 
 interface JWTPayload extends JwtPayload {
     id: string;

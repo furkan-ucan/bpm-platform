@@ -1,4 +1,5 @@
 import { Router } from 'express';
+
 import { authRoutes } from '@/features/auth/routes/auth.routes';
 import { processRoutes } from '@/features/processes/routes/process.routes';
 

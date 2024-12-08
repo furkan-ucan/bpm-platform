@@ -1,5 +1,6 @@
 import { Schema, model, Document } from 'mongoose';
-import { ITask, TaskStatus,  TaskPriority } from '../types/task.types';
+
+import { type ITask, TaskStatus,  TaskPriority } from '../types/task.types';
 
 const taskSchema = new Schema({
     name: { type: String, required: true, maxlength: 100 },

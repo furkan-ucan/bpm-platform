@@ -1,9 +1,10 @@
-import { Types } from 'mongoose';
-import { ITaskRepository } from '@/shared/interfaces/repositories/ITaskRepository';
-import { CreateTaskDTO, UpdateTaskDTO, TaskFilterDTO } from '@/shared/types/dtos/task.dto';
-import { ValidationError } from '@/shared/errors/types/app-error';
+import { type Types } from 'mongoose';
+
+import { type BPMNEngine } from '@/core/bpmn/engine/bpmn-engine';
 import { convertTaskToDTO } from '@/features/tasks/utils/task.utils';
-import { BPMNEngine } from '@/core/bpmn/engine/bpmn-engine';
+import { ValidationError } from '@/shared/errors/types/app-error';
+import { type ITaskRepository } from '@/shared/interfaces/repositories/ITaskRepository';
+import { type CreateTaskDTO, type UpdateTaskDTO, type TaskFilterDTO } from '@/shared/types/dtos/task.dto';
 
 export class TaskService {
     constructor(

@@ -1,12 +1,14 @@
-import express, { Application } from 'express';
 import cors from 'cors';
+import express, { type Application } from 'express';
 import helmet from 'helmet';
+
 import { env } from '@/config';
-import { errorHandler } from '@/shared/errors/handlers/error-handler';
-import { DatabaseConnection } from '@/infrastructure/database/mongodb/connections/connection';
 import { authRoutes } from '@/features/auth/routes/auth.routes';
 import { processRoutes } from '@/features/processes/routes/process.routes';
 import taskRoutes from '@/features/tasks/routes/task.routes';
+import { DatabaseConnection } from '@/infrastructure/database/mongodb/connections/connection';
+import { errorHandler } from '@/shared/errors/handlers/error-handler';
+
 import { requestLogger } from './middleware/request-logger';
 
 export class App {

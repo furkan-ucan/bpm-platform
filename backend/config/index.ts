@@ -1,2 +1,12 @@
-export * from './env.config';
-export * from './constants'; 
+export * from './env.config.js';
+export * from './constants.js';
+
+export interface SecurityConfig {
+  cors: {
+    allowedOrigins: string[];
+  };
+  jwt: {
+    secret: string;
+    expiresIn: string;
+  };
+}

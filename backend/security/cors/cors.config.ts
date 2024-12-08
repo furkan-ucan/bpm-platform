@@ -1,13 +1,23 @@
 import cors from 'cors';
-import { CorsOptions } from 'cors';
 
-export const corsOptions: CorsOptions = {
-    origin: process.env.ALLOWED_ORIGINS?.split(',') || '*',
-    methods: ['GET', 'POST', 'PUT', DELETE', 'PATCH'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-    exposedHeaders: ['X-Total-Count'],
-    credentials: true,
-    maxAge: 600 // 10 minutes
-};
+import type { CorsOptions } from 'cors';
+import { type SecurityConfig } from '../index.js';
 
-export const corsMiddleware = cors(corsOptions);
+export function corsConfig(config: SecurityConfig['cors']): CorsOptions {
+    return {
+        origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+            if (!origin || config.allowedOrigins.indexOf(origin) !== -1) {
+                callback(null, true);
+            } else {
+                callback(new Error('CORS policy violation'));
+            }
+        },
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+        allowedHeaders: ['Content-Type', 'Authorization'],
+        exposedHeaders: ['X-Total-Count'],
+        credentials: true,
+        maxAge: 600 // 10 minutes
+    };
+}
+
+export const corsMiddleware = cors(corsConfig({ allowedOrigins: process.env.ALLOWED_ORIGINS?.split(',') || '*' }));

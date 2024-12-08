@@ -1,7 +1,9 @@
-import { Request, Response, NextFunction, ErrorRequestHandler } from 'express';
-import { AppError } from '../types/app-error';
-import { logger } from '@/shared/utils/logger';
+import { type Request, type Response, type NextFunction, type ErrorRequestHandler } from 'express';
+
 import { env } from '@/config';
+import { logger } from '@/shared/utils/logger';
+
+import { AppError } from '../types/app-error';
 
 export const errorHandler: ErrorRequestHandler = (
     error: Error,

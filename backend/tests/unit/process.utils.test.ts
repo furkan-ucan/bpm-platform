@@ -1,11 +1,13 @@
+import { Types } from "mongoose";
+
 import {
   convertBpmnToProcessSteps,
   mapBpmnTypeToProcessType,
   convertProcessToDTO,
 } from "../../features/processes/utils/process.utils";
+
 import type { BPMNElement } from "../../core/bpmn/parsers/bpmn-parser";
 import type { IProcess } from "../../features/processes/models/process.model";
-import { Types } from "mongoose";
 
 describe("Process Utils", () => {
   describe("convertBpmnToProcessSteps", () => {

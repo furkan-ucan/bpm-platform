@@ -1,7 +1,8 @@
-import { Request, Response, NextFunction } from 'express';
+import { type NextFunction, type Request, type Response } from 'express';
 import jwt from 'jsonwebtoken';
-import logger from '../../monitoring/logging/providers/winston.logger';
-import { IUser } from '@/features/auth/models/user.model';
+
+import { type IUser } from '@/features/auth/models/user.model.js';
+import logger from '@/monitoring/logging/providers/winston.logger.js';
 
 export interface AuthRequest extends Request {
     user?: IUser & {
@@ -10,11 +11,15 @@ export interface AuthRequest extends Request {
     };
 }
 
-export const authMiddleware = async (req: AuthRequest, res: Response, next: NextFunction) => {
+export const authMiddleware = async (
+    req: AuthRequest,
+    res: Response,
+    next: NextFunction
+): Promise<Response | void> => {
     try {
         const authHeader = req.headers.authorization;
         
-        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        if (!authHeader?.startsWith('Bearer ')) {
             return res.status(401).json({
                 status: 'error',
                 message: 'No token provided'
@@ -31,10 +36,13 @@ export const authMiddleware = async (req: AuthRequest, res: Response, next: Next
             });
         }
 
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        req.user = decoded as any;
+        const decoded = jwt.verify(token, process.env.JWT_SECRET) as IUser & {
+            id: string;
+            permissions: string[];
+        };
         
-        next();
+        req.user = decoded;
+        return next();
     } catch (error) {
         logger.error('Authentication error:', {
             error: error instanceof Error ? error.message : 'Unknown error',

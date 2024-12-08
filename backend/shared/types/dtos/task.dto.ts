@@ -1,5 +1,6 @@
-import { Types } from 'mongoose';
-import { TaskStatus, TaskPriority } from '@/features/tasks/types/task.types';
+import { type Types } from 'mongoose';
+
+import { type TaskStatus, type TaskPriority } from '@/features/tasks/types/task.types';
 
 export interface CreateTaskDTO {
     name: string;

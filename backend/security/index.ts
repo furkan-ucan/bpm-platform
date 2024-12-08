@@ -1,8 +1,12 @@
-import rateLimit from "express-rate-limit";
-import cors from "cors";
-import helmet from "helmet";
+import 'module-alias/register';
+import cors from 'cors';
 import { expressjwt } from "express-jwt";
-import { env } from "@/config";
+import rateLimit from "express-rate-limit";
+import helmet from "helmet";
+import { type Request } from 'express';
+
+import { env, type SecurityConfig } from '@config/index';
+import { corsConfig } from './cors/cors.config.js';
 
 // Rate Limiter Configuration
 export const rateLimiter = rateLimit({
@@ -13,45 +17,61 @@ export const rateLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// CORS Configuration
-export const corsOptions = {
-  origin: (
-    origin: string | undefined,
-    callback: (err: Error | null, allow?: boolean) => void
-  ) => {
-    if (!origin || env.allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error("CORS policy violation"));
-    }
-  },
-  methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
-  allowedHeaders: ["Content-Type", "Authorization"],
-  exposedHeaders: ["X-Total-Count"],
-  credentials: true,
-  maxAge: 600, // 10 dakika
-};
+export function configureSecurity(config: SecurityConfig) {
+    const corsOptions = {
+        origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+            if (!origin || config.cors.allowedOrigins.indexOf(origin) !== -1) {
+                callback(null, true);
+            } else {
+                callback(new Error('CORS policy violation'));
+            }
+        },
+        credentials: true,
+        optionsSuccessStatus: 200
+    };
 
-// JWT Authentication
-export const jwtAuth = expressjwt({
-  secret: env.jwt.secret,
-  algorithms: ["HS256"],
-  requestProperty: "user",
-});
+    return {
+        cors: cors(corsOptions),
+        jwt: configureJwt(config.jwt)
+    };
+}
 
-// Security Headers
-export const securityHeaders = helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'"],
-      fontSrc: ["'self'"],
-      objectSrc: ["'none'"],
-      mediaSrc: ["'self'"],
-      frameSrc: ["'none'"],
-    },
-  },
-});
+function configureJwt(jwtConfig: SecurityConfig['jwt']) {
+    const getTokenFromRequest = (req: Request): string | undefined => {
+        const authHeader = req.headers.authorization;
+        if (authHeader && authHeader.startsWith('Bearer ')) {
+            return authHeader.split(' ')[1];
+        }
+        return undefined;
+    };
+
+    return expressjwt({
+        secret: jwtConfig.secret,
+        algorithms: ["HS256"],
+        credentialsRequired: true,
+        requestProperty: "user",
+        getToken: getTokenFromRequest
+    }).unless({
+        path: [
+          "/api/v1/auth/login",
+          "/api/v1/auth/register",
+          "/api/v1/auth/refresh-token",
+          { url: /^\/api\/v1\/docs.*/, methods: ["GET"] },
+        ],
+    });
+}
+
+// Security Middleware
+export const securityMiddleware = [
+    helmet(),
+    rateLimiter,
+    configureSecurity({
+      cors: {
+        allowedOrigins: env.allowedOrigins
+      },
+      jwt: {
+        secret: env.jwt.secret,
+        expiresIn: env.jwt.expiresIn
+      }
+    }).jwt,
+  ];

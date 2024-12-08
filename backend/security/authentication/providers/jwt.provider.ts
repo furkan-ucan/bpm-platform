@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken';
+
 import { env } from '@/config';
 import { AuthenticationError } from '@/shared/errors/types/app-error';
 

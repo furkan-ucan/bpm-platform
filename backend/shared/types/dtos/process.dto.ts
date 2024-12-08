@@ -1,8 +1,9 @@
-import { Types } from "mongoose";
+import { type Types } from "mongoose";
+
 import {
-  ProcessStatus,
-  StepType,
-  StepStatus,
+  type ProcessStatus,
+  type StepType,
+  type StepStatus,
 } from "@/features/processes/types/process.types";
 
 export interface CreateProcessDTO {

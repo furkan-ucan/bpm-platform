@@ -1,6 +1,8 @@
-import { Request, Response, NextFunction } from 'express';
+import { type Request, type Response, type NextFunction } from 'express';
 import { body, query, validationResult, param } from 'express-validator';
+
 import { ValidationError } from '@/shared/errors/types/app-error';
+
 import { TaskStatus, TaskPriority } from '../types/task.types';
 
 const handleValidationErrors = (req: Request, res: Response, next: NextFunction) => {

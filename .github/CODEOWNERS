@@ -1,0 +1,24 @@
+# These owners will be the default owners for everything in the repo.
+* @project-admin
+
+# Backend code
+/backend/ @backend-team
+/backend/security/ @security-team
+
+# Documentation
+/docs/ @docs-team
+
+# Configuration files
+*.json @devops-team
+*.yml @devops-team
+*.yaml @devops-team
+
+# Security-related files
+/backend/security/ @security-team
+SECURITY.md @security-team
+
+# Database
+/backend/database/ @database-team
+
+# Frontend code (when added)
+# /frontend/ @frontend-team

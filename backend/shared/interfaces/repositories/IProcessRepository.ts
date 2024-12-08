@@ -1,6 +1,7 @@
-import { Types } from 'mongoose';
-import { IProcess } from '@/features/processes/models/process.model';
-import { CreateProcessDTO, UpdateProcessDTO, ProcessFilterDTO } from '@/shared/types/dtos/process.dto';
+import { type Types } from 'mongoose';
+
+import { type IProcess } from '@/features/processes/models/process.model';
+import { type CreateProcessDTO, type UpdateProcessDTO, type ProcessFilterDTO } from '@/shared/types/dtos/process.dto';
 
 export interface IProcessRepository {
     create(data: CreateProcessDTO, userId: Types.ObjectId): Promise<IProcess>;

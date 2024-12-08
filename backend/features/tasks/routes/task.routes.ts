@@ -1,10 +1,11 @@
-import { Router, RequestHandler, Response, NextFunction } from 'express';
+import { Router, type RequestHandler, type Response, type NextFunction } from 'express';
+
+import { BPMNEngine } from '@/core/bpmn/engine/bpmn-engine';
+import { authenticate , type AuthenticatedRequest } from '@/features/auth/middleware/auth.middleware';
+import { TaskRepository } from '@/infrastructure/database/mongodb/repositories/TaskRepository';
+
 import { TaskController } from '../controllers/task.controller';
 import { TaskService } from '../services/task.service';
-import { TaskRepository } from '@/infrastructure/database/mongodb/repositories/TaskRepository';
-import { BPMNEngine } from '@/core/bpmn/engine/bpmn-engine';
-import { authenticate } from '@/features/auth/middleware/auth.middleware';
-import { AuthenticatedRequest } from '@/features/auth/middleware/auth.middleware';
 import { 
     validateCreateTask, 
     validateUpdateTask, 

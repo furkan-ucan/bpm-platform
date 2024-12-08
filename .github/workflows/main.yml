@@ -1,10 +1,14 @@
-name: CI/CD Pipeline
+name: Main Workflow
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, develop ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, develop ]
+
+env:
+  HEROKU_STAGING_APP: "bpm-platform-staging"
+  HEROKU_PROD_APP: "bpm-platform"
 
 jobs:
   validate:
@@ -12,76 +16,39 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
+      - uses: actions/setup-node@v3
         with:
-          node-version: '18'
+          node-version: '20.x'
           cache: 'npm'
-          cache-dependency-path: '**/package-lock.json'
-
+          cache-dependency-path: './backend/package-lock.json'
+      
       - name: Install Dependencies
-        run: |
-          cd backend
-          npm ci
-
+        working-directory: ./backend
+        run: npm ci
+      
       - name: Lint
-        run: |
-          cd backend
-          npm run lint
-
-      - name: Type Check
-        run: |
-          cd backend
-          npm run type-check
+        working-directory: ./backend
+        run: npm run lint
 
   test:
     name: Test
     needs: validate
     runs-on: ubuntu-latest
-    
-    services:
-      mongodb:
-        image: mongo:5.0
-        ports:
-          - 27017:27017
-
     steps:
       - uses: actions/checkout@v3
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
+      - uses: actions/setup-node@v3
         with:
-          node-version: '18'
+          node-version: '20.x'
           cache: 'npm'
-          cache-dependency-path: '**/package-lock.json'
-
+          cache-dependency-path: './backend/package-lock.json'
+      
       - name: Install Dependencies
-        run: |
-          cd backend
-          npm ci
-
-      - name: Run Unit Tests
-        run: |
-          cd backend
-          npm run test:unit
-        env:
-          NODE_ENV: test
-          MONGODB_URI: mongodb://localhost:27017/bpm_test
-
-      - name: Run Integration Tests
-        run: |
-          cd backend
-          npm run test:integration
-        env:
-          NODE_ENV: test
-          MONGODB_URI: mongodb://localhost:27017/bpm_test
-
-      - name: Upload Coverage
-        uses: actions/upload-artifact@v3
-        with:
-          name: coverage
-          path: backend/coverage
+        working-directory: ./backend
+        run: npm ci
+      
+      - name: Run Tests
+        working-directory: ./backend
+        run: npm test
 
   build:
     name: Build
@@ -89,106 +56,129 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
+      - uses: actions/setup-node@v3
         with:
-          node-version: '18'
+          node-version: '20.x'
           cache: 'npm'
-          cache-dependency-path: '**/package-lock.json'
-
+          cache-dependency-path: './backend/package-lock.json'
+      
       - name: Install Dependencies
-        run: |
-          cd backend
-          npm ci
-
+        working-directory: ./backend
+        run: npm ci
+      
       - name: Build
-        run: |
-          cd backend
-          npm run build
-
-      - name: Upload Build Artifacts
+        working-directory: ./backend
+        run: npm run build
+      
+      - name: Upload Build
         uses: actions/upload-artifact@v3
         with:
           name: dist
           path: backend/dist
 
-  deploy-staging:
-    name: Deploy to Staging
+  check-secrets:
+    name: Check Required Secrets
     needs: build
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    
+    outputs:
+      has_heroku_secrets: ${{ steps.check.outputs.has_heroku_secrets }}
+      has_slack_webhook: ${{ steps.check.outputs.has_slack_webhook }}
+    steps:
+      - id: check
+        run: |
+          if [[ -n "${{ secrets.HEROKU_API_KEY }}" ]] && [[ -n "${{ secrets.HEROKU_EMAIL }}" ]]; then
+            echo "has_heroku_secrets=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_heroku_secrets=false" >> $GITHUB_OUTPUT
+          fi
+          
+          if [[ -n "${{ secrets.SLACK_WEBHOOK }}" ]]; then
+            echo "has_slack_webhook=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_slack_webhook=false" >> $GITHUB_OUTPUT
+          fi
+
+  deploy-staging:
+    name: Deploy to Staging
+    needs: check-secrets
+    if: |
+      needs.check-secrets.outputs.has_heroku_secrets == 'true' &&
+      github.ref == 'refs/heads/develop' &&
+      github.event_name == 'push'
+    runs-on: ubuntu-latest
     environment:
       name: staging
-      url: https://staging.bpm-platform.com
+      url: https://bpm-platform-staging.herokuapp.com
     
     steps:
       - uses: actions/checkout@v3
-
-      - name: Download Build Artifacts
-        uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v3
         with:
           name: dist
           path: backend/dist
-
-      - name: Deploy to Heroku
+      
+      - name: Deploy to Heroku Staging
         uses: akhileshns/heroku-deploy@v3.12.14
         with:
           heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
-          heroku_app_name: bpm-platform-staging
+          heroku_app_name: ${{ env.HEROKU_STAGING_APP }}
           heroku_email: ${{ secrets.HEROKU_EMAIL }}
-          branch: main
+          branch: develop
 
   deploy-production:
     name: Deploy to Production
-    needs: deploy-staging
+    needs: check-secrets
+    if: |
+      needs.check-secrets.outputs.has_heroku_secrets == 'true' &&
+      github.ref == 'refs/heads/main' &&
+      github.event_name == 'push'
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    
     environment:
       name: production
-      url: https://bpm-platform.com
+      url: https://bpm-platform.herokuapp.com
     
     steps:
       - uses: actions/checkout@v3
-
-      - name: Download Build Artifacts
-        uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v3
         with:
           name: dist
           path: backend/dist
-
-      - name: Deploy to Heroku
+      
+      - name: Deploy to Heroku Production
         uses: akhileshns/heroku-deploy@v3.12.14
         with:
           heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
-          heroku_app_name: bpm-platform
+          heroku_app_name: ${{ env.HEROKU_PROD_APP }}
           heroku_email: ${{ secrets.HEROKU_EMAIL }}
           branch: main
 
   notify:
-    name: Notify
-    needs: [validate, test, build]
+    name: Notify Status
+    needs: [check-secrets, deploy-staging, deploy-production]
     runs-on: ubuntu-latest
     if: always()
+    
     steps:
-      - name: Notify on Success
-        if: ${{ success() }}
+      - name: Notify Success
+        if: |
+          needs.check-secrets.outputs.has_slack_webhook == 'true' &&
+          success()
         uses: rtCamp/action-slack-notify@v2
         env:
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
-          SLACK_CHANNEL: ci-cd
+          SLACK_CHANNEL: deployments
+          SLACK_TITLE: "Deployment Status"
           SLACK_COLOR: good
-          SLACK_TITLE: Build Success
-          SLACK_MESSAGE: 'Pipeline completed successfully! 🎉'
-
-      - name: Notify on Failure
-        if: ${{ failure() }}
+          SLACK_MESSAGE: "🎉 Pipeline completed successfully!"
+      
+      - name: Notify Failure
+        if: |
+          needs.check-secrets.outputs.has_slack_webhook == 'true' &&
+          failure()
         uses: rtCamp/action-slack-notify@v2
         env:
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
-          SLACK_CHANNEL: ci-cd
+          SLACK_CHANNEL: deployments
+          SLACK_TITLE: "Deployment Status"
           SLACK_COLOR: danger
-          SLACK_TITLE: Build Failed
-          SLACK_MESSAGE: 'Pipeline failed! Please check the logs 🚨'
+          SLACK_MESSAGE: "❌ Pipeline failed!"

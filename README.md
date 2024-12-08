@@ -1,5 +1,10 @@
 # BPM Platform
 
+[![CI/CD Pipeline](https://github.com/furkan-ucan/bpm-platform/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/furkan-ucan/bpm-platform/actions/workflows/ci-cd.yml)
+[![codecov](https://codecov.io/gh/furkan-ucan/bpm-platform/branch/main/graph/badge.svg)](https://codecov.io/gh/furkan-ucan/bpm-platform)
+[![License](https://img.shields.io/github/license/furkan-ucan/bpm-platform)](LICENSE)
+[![Issues](https://img.shields.io/github/issues/furkan-ucan/bpm-platform)](https://github.com/furkan-ucan/bpm-platform/issues)
+
 🚧 **Project Status: Under Active Development** 🚧
 
 This project is currently in active development. We are building a comprehensive cloud-based Business Process Management (BPM) platform with advanced features and robust technological infrastructure.

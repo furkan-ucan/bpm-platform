@@ -1,0 +1,16 @@
+name: Project Board Automation
+
+on:
+  issues:
+    types: [opened, reopened]
+  pull_request:
+    types: [opened, reopened]
+
+jobs:
+  add_to_project:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/add-to-project@v0.5.0
+        with:
+          project-url: https://github.com/users/furkan-ucan/projects/1
+          github-token: ${{ secrets.GITHUB_TOKEN }}

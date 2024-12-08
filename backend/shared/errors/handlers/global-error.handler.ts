@@ -1,5 +1,6 @@
-import { Request, Response, NextFunction } from "express";
-import { logger } from "@/monitoring/logging/providers/winston.logger";
+import { type Request, type Response, type NextFunction } from "express";
+import logger from "@/monitoring/logging/providers/winston.logger";
+
 import {
   ValidationError,
   NotFoundError,

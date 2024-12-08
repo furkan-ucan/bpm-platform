@@ -1,9 +1,11 @@
-import { Response, NextFunction, RequestHandler } from 'express';
-import { TaskService } from '../services/task.service';
-import { CreateTaskDTO, UpdateTaskDTO, TaskFilterDTO } from '@/shared/types/dtos/task.dto';
-import { AuthenticatedRequest } from '@/features/auth/middleware/auth.middleware';
+import { type Response, type NextFunction, RequestHandler } from 'express';
 import { Types } from 'mongoose';
+
+import { type AuthenticatedRequest } from '@/features/auth/middleware/auth.middleware';
 import { UnauthorizedError } from '@/shared/errors/types/app-error';
+import { type CreateTaskDTO, type UpdateTaskDTO, type TaskFilterDTO } from '@/shared/types/dtos/task.dto';
+
+import { type TaskService } from '../services/task.service';
 
 type AuthHandler = (
     req: AuthenticatedRequest,

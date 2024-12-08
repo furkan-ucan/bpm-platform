@@ -1,25 +1,31 @@
 {
   "compilerOptions": {
-    "target": "es2018",
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
     "baseUrl": ".",
-    "paths": {
-      "@/*": ["./*"]
-    },
+    "outDir": "./dist",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
+    "paths": {
+      "@/*": ["*"],
+      "@config/*": ["config/*"]
+    },
     "types": ["node", "jest"]
   },
   "include": [
-    "./**/*.ts",
-    "./**/*.js",
-    "./**/*.cjs",
-    "./**/*.mjs",
-    "eslint.config.js",
-    "jest.config.cjs"
+    "api/**/*.ts",
+    "config/**/*.ts",
+    "core/**/*.ts",
+    "features/**/*.ts",
+    "infrastructure/**/*.ts",
+    "security/**/*.ts",
+    "shared/**/*.ts",
+    "types/**/*.ts",
+    "tests/**/*.ts",
+    "*.ts"
   ],
   "exclude": ["node_modules", "dist"]
 }

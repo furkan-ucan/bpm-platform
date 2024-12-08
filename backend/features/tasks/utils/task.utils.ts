@@ -1,6 +1,8 @@
-import { ITask, IUser } from '../types/task.types';
-import { TaskResponseDTO } from '@/shared/types/dtos/task.dto';
-import { Types } from 'mongoose';
+import { type Types } from 'mongoose';
+
+import { type TaskResponseDTO } from '@/shared/types/dtos/task.dto';
+
+import { type ITask, type IUser } from '../types/task.types';
 
 const isUser = (value: IUser | Types.ObjectId): value is IUser => {
     return (value as IUser).name !== undefined;

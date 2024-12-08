@@ -1,24 +1,26 @@
-import { Types } from "mongoose";
+import { type Types } from "mongoose";
+
+import { type BPMNEngine } from "@/core/bpmn/engine/bpmn-engine.js";
+import { type ParsedBPMN } from "@/core/bpmn/parsers/bpmn-parser.js";
+import { ValidationError } from "@/shared/errors/types/app-error.js";
+import { type IProcessRepository } from "@/shared/interfaces/repositories/IProcessRepository.js";
 import {
-  CreateProcessDTO,
-  UpdateProcessDTO,
-  ProcessFilterDTO,
-} from "@/shared/types/dtos/process.dto";
-import { IProcessRepository } from "@/shared/interfaces/repositories/IProcessRepository";
-import { ValidationError } from "@/shared/errors/types/app-error";
-import { convertProcessToDTO } from "../utils/process.utils";
-import { BPMNEngine } from "@/core/bpmn/engine/bpmn-engine";
-import { ParsedBPMN } from "@/core/bpmn/parsers/bpmn-parser";
-import { logger } from "@/shared/utils/logger";
-import { ProcessStatus } from "../types/process.types";
+  type CreateProcessDTO,
+  type UpdateProcessDTO,
+  type ProcessFilterDTO,
+} from "@/shared/types/dtos/process.dto.js";
+import { logger } from "@/shared/utils/logger.js";
+
+import { type ProcessStatus } from "../types/process.types.js";
+import { convertProcessToDTO } from "../utils/process.utils.js";
 
 export class ProcessService {
   constructor(
-    private processRepository: IProcessRepository,
-    private bpmnEngine: BPMNEngine
+    private readonly processRepository: IProcessRepository,
+    private readonly bpmnEngine: BPMNEngine
   ) {}
 
-  async createProcess(data: CreateProcessDTO, userId: Types.ObjectId) {
+  public async createProcess(data: CreateProcessDTO, userId: Types.ObjectId) {
     try {
       const process = await this.processRepository.create(data, userId);
 
@@ -37,7 +39,7 @@ export class ProcessService {
 
       const instance = await this.bpmnEngine.startProcess(parsedBPMN, {
         processId: process._id,
-        userId: userId,
+        userId,
       });
 
       const processDTO = convertProcessToDTO(process);
@@ -45,21 +47,21 @@ export class ProcessService {
         ...processDTO,
         instanceId: instance.id,
       };
-    } catch (error: any) {
-      logger.error("Process creation error:", {
+    } catch (error: unknown) {
+      logger.error("Süreç oluşturma hatası:", {
         error,
         processName: data.name,
         userId: userId.toString(),
       });
 
-      if (error.name === "ValidationError") {
+      if (error instanceof Error && error.name === "ValidationError") {
         throw new ValidationError("Geçersiz süreç verisi");
       }
       throw error;
     }
   }
 
-  async getProcessById(id: string) {
+  public async getProcessById(id: string) {
     try {
       const process = await this.processRepository.findById(id);
 
@@ -72,8 +74,8 @@ export class ProcessService {
         engineStatus = this.bpmnEngine.getInstanceStatus(
           `PROC_${process._id.toString()}`
         );
-      } catch (error) {
-        logger.warn("Engine status error:", {
+      } catch (error: unknown) {
+        logger.warn("Motor durum hatası:", {
           error,
           processId: id,
           timestamp: new Date().toISOString(),
@@ -86,15 +88,15 @@ export class ProcessService {
         ...processDTO,
         engineStatus,
       };
-    } catch (error: any) {
-      if (error.name === "CastError") {
+    } catch (error: unknown) {
+      if (error instanceof Error && error.name === "CastError") {
         throw new ValidationError("Geçersiz süreç ID formatı");
       }
       throw error;
     }
   }
 
-  async getProcesses(filters: ProcessFilterDTO) {
+  public async getProcesses(filters: ProcessFilterDTO) {
     const result = await this.processRepository.findAll(filters);
     return {
       processes: result.processes.map(convertProcessToDTO),
@@ -107,7 +109,7 @@ export class ProcessService {
     };
   }
 
-  async updateProcess(
+  public async updateProcess(
     id: string,
     data: UpdateProcessDTO,
     userId: Types.ObjectId
@@ -128,7 +130,7 @@ export class ProcessService {
     }
   }
 
-  async deleteProcess(id: string) {
+  public async deleteProcess(id: string) {
     try {
       const process = await this.processRepository.findById(id);
       if (!process) {
@@ -155,7 +157,7 @@ export class ProcessService {
     }
   }
 
-  async updateProcessStatus(id: string, status: ProcessStatus): Promise<void> {
+  public async updateProcessStatus(id: string, status: string): Promise<void> {
     try {
       const process = await this.processRepository.findById(id);
       if (!process) {
@@ -163,32 +165,26 @@ export class ProcessService {
       }
 
       const instanceId = `PROC_${process._id.toString()}`;
-      try {
-        await this.bpmnEngine.updateInstanceStatus(instanceId, status);
-      } catch (engineError) {
-        logger.error("Süreç durumu güncelleme hatası:", {
-          error: engineError,
-          processId: id,
-          status,
-        });
-        throw new Error("Süreç durumu güncellenemedi");
+      await this.bpmnEngine.updateInstanceStatus(instanceId, status);
+
+      if (!["active", "inactive", "archived"].includes(status)) {
+        throw new ValidationError("Geçersiz süreç durumu");
       }
 
       await this.processRepository.update(
         id,
         {
-          status,
+          status: status as ProcessStatus,
         },
         process.createdBy
       );
-
-      logger.info("Süreç durumu güncellendi", {
+    } catch (error: unknown) {
+      logger.error("Süreç durum güncelleme hatası:", {
+        error,
         processId: id,
         status,
-        userId: process.createdBy,
       });
-    } catch (error: any) {
-      if (error.name === "CastError") {
+      if (error instanceof Error && error.name === "CastError") {
         throw new ValidationError("Geçersiz süreç ID formatı");
       }
       throw error;

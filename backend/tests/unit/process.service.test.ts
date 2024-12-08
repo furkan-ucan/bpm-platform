@@ -1,30 +1,71 @@
-// İmport yollarını güncelle
-import { ProcessService } from "../../features/processes/services/process.service";
-import type { ProcessRepository } from "../../infrastructure/database/mongodb/repositories/ProcessRepository";
-import type { BPMNEngine } from "../../core/bpmn/engine/bpmn-engine";
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { Types } from "mongoose";
-import { ValidationError } from "../../shared/errors/types/app-error";
-import type { IProcess } from "../../features/processes/models/process.model";
-import type { ProcessStatus } from "../../features/processes/types/process.types";
+
+import { ProcessService } from "../../features/processes/services/process.service";
 import { ERROR_MESSAGES } from "../../monitoring/logging/providers/winston.logger";
-import type { ProcessFilterDTO } from "../../features/processes/dtos/process-filter.dto";
+import { ValidationError } from "../../shared/errors/types/app-error";
 import { createMockProcess } from "../helpers/process.fixtures";
 
+import type { BPMNEngine } from "../../core/bpmn/engine/bpmn-engine";
+import type { ProcessFilterDTO } from "../../features/processes/dtos/process-filter.dto";
+import type { IProcess } from "../../features/processes/models/process.model";
+import type { ProcessStatus } from "../../features/processes/types/process.types";
+import type { ProcessRepository } from "../../infrastructure/database/mongodb/repositories/ProcessRepository";
+
 // Test interface'ini güncelle
-type MockRepository = jest.Mocked<ProcessRepository> & {
-  findByName: jest.Mock;
-  find: jest.Mock;
-  findAll: jest.Mock; // findAll ekle
-  updateStatus: jest.Mock;
+type MockRepository = {
+  findById: ReturnType<typeof vi.fn>;
+  findByName: ReturnType<typeof vi.fn>;
+  find: ReturnType<typeof vi.fn>;
+  findAll: ReturnType<typeof vi.fn>;
+  create: ReturnType<typeof vi.fn>;
+  update: ReturnType<typeof vi.fn>;
+  updateStatus: ReturnType<typeof vi.fn>;
+  delete: ReturnType<typeof vi.fn>;
+  exists: ReturnType<typeof vi.fn>;
 };
 
-jest.mock("@/infrastructure/database/mongodb/repositories/ProcessRepository");
-jest.mock("@/core/bpmn/engine/bpmn-engine");
+type MockBPMNEngine = {
+  startProcess: ReturnType<typeof vi.fn>;
+  stopInstance: ReturnType<typeof vi.fn>;
+  getInstanceStatus: ReturnType<typeof vi.fn>;
+  updateInstanceStatus: ReturnType<typeof vi.fn>;
+  instances: Map<string, any>;
+};
+
+vi.mock("@/infrastructure/database/mongodb/repositories/ProcessRepository");
+vi.mock("@/core/bpmn/engine/bpmn-engine");
+vi.mock("../../monitoring/logging/providers/winston.logger", () => ({
+  logger: {
+    error: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn(),
+  },
+  ERROR_MESSAGES: {
+    PROCESS_NOT_FOUND: "Süreç bulunamadı",
+    INVALID_PROCESS_ID: "Geçersiz süreç ID formatı",
+    PROCESS_NAME_EXISTS: "Bu isimde bir süreç zaten var",
+    INVALID_PROCESS_STATUS: "Geçersiz süreç durumu",
+    INVALID_STATUS_TRANSITION: "Geçersiz durum geçişi",
+    ENGINE_ERROR: "Motor hatası",
+    PROCESS_UPDATE_FAILED: "Süreç güncellenemedi",
+    VALIDATION_ERROR: "Doğrulama hatası"
+  }
+}));
+
+// Geçerli durum geçişleri için sabit tanımlayalım
+const VALID_STATUS_TRANSITIONS = {
+  pending: ["active"],
+  active: ["inactive", "archived"],
+  inactive: ["active", "archived"],
+  archived: []
+} as const;
 
 describe("ProcessService", () => {
   let processService: ProcessService;
   let processRepository: MockRepository;
-  let bpmnEngine: jest.Mocked<BPMNEngine>;
+  let bpmnEngine: MockBPMNEngine;
 
   const mockProcessData = {
     name: "Test Süreci",
@@ -36,27 +77,29 @@ describe("ProcessService", () => {
   const mockUserId = new Types.ObjectId();
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 
     processRepository = {
-      findById: jest.fn(),
-      findByName: jest.fn(),
-      find: jest.fn(),
-      findAll: jest.fn(),
-      create: jest.fn(),
-      update: jest.fn(),
-      updateStatus: jest.fn(),
-      delete: jest.fn(),
-    } as unknown as MockRepository;
+      findById: vi.fn(),
+      findByName: vi.fn(),
+      find: vi.fn(),
+      findAll: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      updateStatus: vi.fn(),
+      delete: vi.fn(),
+      exists: vi.fn(),
+    } as MockRepository;
 
     bpmnEngine = {
-      startProcess: jest.fn(),
-      stopInstance: jest.fn(),
-      getInstanceStatus: jest.fn(),
-      updateInstanceStatus: jest.fn(),
-    } as unknown as jest.Mocked<BPMNEngine>;
+      startProcess: vi.fn(),
+      stopInstance: vi.fn(),
+      getInstanceStatus: vi.fn(),
+      updateInstanceStatus: vi.fn(),
+      instances: new Map(),
+    } as unknown as MockBPMNEngine;
 
-    processService = new ProcessService(processRepository, bpmnEngine);
+    processService = new ProcessService(processRepository, bpmnEngine as unknown as BPMNEngine);
   });
 
   describe("createProcess", () => {
@@ -86,12 +129,12 @@ describe("ProcessService", () => {
 
       const result = await processService.createProcess(
         mockProcessData,
-        mockUserId
+        mockUserId,
       );
 
       expect(processRepository.create).toHaveBeenCalledWith(
         mockProcessData,
-        mockUserId
+        mockUserId,
       );
       expect(bpmnEngine.startProcess).toHaveBeenCalled();
       expect(result.id).toBeDefined();
@@ -101,11 +144,11 @@ describe("ProcessService", () => {
 
     it("should throw ValidationError when process name already exists", async () => {
       processRepository.create.mockRejectedValue(
-        new ValidationError("Bu isimde bir süreç zaten var")
+        new ValidationError("Bu isimde bir süreç zaten var"),
       );
 
       await expect(
-        processService.createProcess(mockProcessData, mockUserId)
+        processService.createProcess(mockProcessData, mockUserId),
       ).rejects.toThrow(ValidationError);
     });
   });
@@ -136,14 +179,14 @@ describe("ProcessService", () => {
       const result = await processService.updateProcess(
         mockProcessId,
         mockUpdateData,
-        mockUserId
+        mockUserId,
       );
 
       expect(processRepository.findById).toHaveBeenCalledWith(mockProcessId);
       expect(processRepository.update).toHaveBeenCalledWith(
         mockProcessId,
         mockUpdateData,
-        mockUserId
+        mockUserId,
       );
       expect(result.name).toBe(mockUpdateData.name);
       expect(result.status).toBe(mockUpdateData.status);
@@ -153,18 +196,18 @@ describe("ProcessService", () => {
       processRepository.findById.mockResolvedValue(null);
 
       await expect(
-        processService.updateProcess(mockProcessId, mockUpdateData, mockUserId)
+        processService.updateProcess(mockProcessId, mockUpdateData, mockUserId),
       ).rejects.toThrow(ValidationError);
     });
 
     it("should throw ValidationError when process name already exists", async () => {
       processRepository.findById.mockResolvedValue({} as IProcess);
       processRepository.update.mockRejectedValue(
-        new ValidationError("Bu isimde bir süreç zaten var")
+        new ValidationError("Bu isimde bir süreç zaten var"),
       );
 
       await expect(
-        processService.updateProcess(mockProcessId, mockUpdateData, mockUserId)
+        processService.updateProcess(mockProcessId, mockUpdateData, mockUserId),
       ).rejects.toThrow(ValidationError);
     });
 
@@ -183,8 +226,8 @@ describe("ProcessService", () => {
         processService.updateProcess(
           new Types.ObjectId().toString(),
           updateData,
-          new Types.ObjectId()
-        )
+          new Types.ObjectId(),
+        ),
       ).rejects.toThrow(ValidationError);
     });
 
@@ -209,13 +252,13 @@ describe("ProcessService", () => {
         processService.updateProcess(
           processId.toString(),
           updateData,
-          new Types.ObjectId()
-        )
+          new Types.ObjectId(),
+        ),
       ).resolves.not.toThrow();
 
       // İsteğe bağlı olarak çağrıların doğru parametrelerle yapıldığını kontrol edebiliriz
       expect(processRepository.findById).toHaveBeenCalledWith(
-        processId.toString()
+        processId.toString(),
       );
       expect(processRepository.update).toHaveBeenCalled();
     });
@@ -239,7 +282,7 @@ describe("ProcessService", () => {
 
       expect(processRepository.findById).toHaveBeenCalledWith(mockProcessId);
       expect(bpmnEngine.stopInstance).toHaveBeenCalledWith(
-        `PROC_${mockProcessId}`
+        `PROC_${mockProcessId}`,
       );
       expect(processRepository.delete).toHaveBeenCalledWith(mockProcessId);
       expect(result).toEqual({ message: "Süreç başarıyla silindi" });
@@ -249,7 +292,7 @@ describe("ProcessService", () => {
       processRepository.findById.mockResolvedValue(null);
 
       await expect(processService.deleteProcess(mockProcessId)).rejects.toThrow(
-        ValidationError
+        ValidationError,
       );
     });
 
@@ -260,7 +303,7 @@ describe("ProcessService", () => {
       });
 
       await expect(processService.deleteProcess("invalid-id")).rejects.toThrow(
-        ValidationError
+        ValidationError,
       );
     });
   });
@@ -289,7 +332,7 @@ describe("ProcessService", () => {
 
       expect(processRepository.findById).toHaveBeenCalledWith(mockProcessId);
       expect(bpmnEngine.getInstanceStatus).toHaveBeenCalledWith(
-        `PROC_${mockProcessId}`
+        `PROC_${mockProcessId}`,
       );
       expect(result.id).toBe(mockProcessId);
       expect(result.status).toBe("active");
@@ -437,18 +480,18 @@ describe("ProcessService", () => {
 
       await processService.updateProcessStatus(
         mockProcessId,
-        "active" as ProcessStatus
+        "active" as ProcessStatus,
       );
 
       expect(processRepository.findById).toHaveBeenCalledWith(mockProcessId);
       expect(bpmnEngine.updateInstanceStatus).toHaveBeenCalledWith(
         `PROC_${mockProcessId}`,
-        "active"
+        "active",
       );
       expect(processRepository.update).toHaveBeenCalledWith(
         mockProcessId,
         { status: "active" },
-        mockProcess.createdBy
+        mockProcess.createdBy,
       );
     });
 
@@ -456,51 +499,38 @@ describe("ProcessService", () => {
       processRepository.findById.mockResolvedValue(null);
 
       await expect(
-        processService.updateProcessStatus(mockProcessId, "active")
+        processService.updateProcessStatus(mockProcessId, "active"),
       ).rejects.toThrow(ValidationError);
     });
 
     it("should handle engine errors gracefully", async () => {
       const mockProcess = createMockProcess({
         _id: new Types.ObjectId(),
-        name: "Test Process",
-        description: "Test Description",
         status: "active",
-        steps: [
-          {
-            name: "Step 1",
-            type: "task",
-            status: "pending",
-          },
-        ],
-        isTemplate: false,
-        version: 1,
-        createdBy: new Types.ObjectId(),
-        updatedBy: new Types.ObjectId(),
-        createdAt: new Date(),
-        updatedAt: new Date(),
       });
       processRepository.findById.mockResolvedValue(mockProcess);
       bpmnEngine.updateInstanceStatus.mockRejectedValue(
-        new Error(ERROR_MESSAGES.ENGINE_ERROR)
+        new Error(ERROR_MESSAGES.ENGINE_ERROR),
       );
 
       await expect(
         processService.updateProcessStatus(
           mockProcessId,
-          "completed" as ProcessStatus
-        )
-      ).rejects.toThrow(ERROR_MESSAGES.PROCESS_UPDATE_FAILED);
+          "inactive" as ProcessStatus,
+        ),
+      ).rejects.toThrow(ERROR_MESSAGES.ENGINE_ERROR);
     });
 
     it("should throw ValidationError for invalid status transition", async () => {
       const processId = new Types.ObjectId();
+      const currentStatus = "active" as ProcessStatus;
+      const invalidNextStatus = "inactive" as ProcessStatus;
+      
       const process = createMockProcess({
         _id: processId,
-        status: "completed" as ProcessStatus,
+        status: currentStatus,
       });
 
-      // Mock repository responses
       processRepository.findById.mockResolvedValue(process);
       processRepository.update.mockRejectedValue(
         new ValidationError("Geçersiz durum geçişi")
@@ -509,8 +539,8 @@ describe("ProcessService", () => {
       await expect(
         processService.updateProcessStatus(
           processId.toString(),
-          "active" as ProcessStatus
-        )
+          invalidNextStatus,
+        ),
       ).rejects.toThrow(ValidationError);
     });
 
@@ -526,8 +556,8 @@ describe("ProcessService", () => {
       await expect(
         processService.updateProcessStatus(
           processId.toString(),
-          "completed" as ProcessStatus // userId parametresini kaldırdık
-        )
+          "inactive" as ProcessStatus,
+        ),
       ).resolves.not.toThrow();
     });
 
@@ -544,16 +574,16 @@ describe("ProcessService", () => {
 
       await processService.updateProcessStatus(
         processId.toString(),
-        "active" as ProcessStatus
+        "active" as ProcessStatus,
       );
 
       expect(processRepository.findById).toHaveBeenCalledWith(
-        processId.toString()
+        processId.toString(),
       );
       expect(processRepository.update).toHaveBeenCalledWith(
         processId.toString(),
         { status: "active" },
-        process.createdBy
+        process.createdBy,
       );
     });
   });

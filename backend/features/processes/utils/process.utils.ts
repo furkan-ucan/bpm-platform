@@ -1,6 +1,7 @@
-import { BPMNElement } from "@/core/bpmn/parsers/bpmn-parser";
-import { IProcess } from "../models/process.model";
-import { ProcessResponseDTO } from "@/shared/types/dtos/process.dto";
+import { type BPMNElement } from "@/core/bpmn/parsers/bpmn-parser.js";
+import { type ProcessResponseDTO } from "@/shared/types/dtos/process.dto.js";
+
+import { type IProcess } from "../models/process.model.js";
 
 export function convertBpmnToProcessSteps(elements: BPMNElement[]) {
   return elements.map((element) => ({

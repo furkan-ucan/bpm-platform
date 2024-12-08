@@ -1,6 +1,7 @@
-import { Request } from 'express';
-import { Types } from 'mongoose';
-import { IUser } from '@/features/auth/models/user.model';
+import { type Request } from 'express';
+import { type Types } from 'mongoose';
+
+import { type IUser } from '@/features/auth/models/user.model';
 
 export interface AuthRequest extends Request {
     user: IUser & {

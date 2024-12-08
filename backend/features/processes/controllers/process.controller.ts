@@ -1,8 +1,9 @@
-import { Response, NextFunction } from 'express';
-import { RequestHandler as ExpressHandler } from 'express';
-import { ProcessService } from '../services/process.service';
-import { CreateProcessDTO, UpdateProcessDTO, ProcessFilterDTO } from '@/shared/types/dtos/process.dto';
-import { AuthenticatedRequest } from '@/features/auth/middleware/auth.middleware';
+import { type Response, type NextFunction , RequestHandler as ExpressHandler } from 'express';
+
+import { type AuthenticatedRequest } from '@/features/auth/middleware/auth.middleware';
+import { type CreateProcessDTO, type UpdateProcessDTO, type ProcessFilterDTO } from '@/shared/types/dtos/process.dto';
+
+import { type ProcessService } from '../services/process.service';
 
 type AuthRequestHandler = (
     req: AuthenticatedRequest,

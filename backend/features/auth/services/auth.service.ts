@@ -1,68 +1,132 @@
-import { User } from '../models/user.model';
-import { LoginDTO, RegisterDTO, TokenDTO } from '@/shared/types/dtos/auth.dto';
-import { AuthenticationError, ValidationError } from '@/shared/errors/types/app-error';
-import { generateToken, verifyToken } from '@/security/authentication/providers/jwt.provider';
-import { env } from '@/config';
+import { type Model } from 'mongoose';
+
+import { AuthenticationError } from '@/shared/errors/types/app-error.js';
+import { type LoginDTO, type RegisterDTO } from '@/shared/types/dtos/auth.dto.js';
+import { type TokenResponse, type UserResponse } from '@/shared/types/responses/token.response.js';
+
+import { type TokenService } from './token.service.js';
+import { type IUser } from '../models/user.model.js';
+
+const LOGIN_ATTEMPTS_WINDOW = 15 * 60 * 1000; // 15 minutes
+const MAX_LOGIN_ATTEMPTS = 5;
 
 export class AuthService {
-    public async register(userData: RegisterDTO): Promise<{ user: any; tokens: TokenDTO }> {
-        const existingUser = await User.findOne({ email: userData.email });
+    #userModel: Model<IUser>;
+    #tokenService: TokenService;
+
+    constructor(userModel: Model<IUser>, tokenService: TokenService) {
+        this.#userModel = userModel;
+        this.#tokenService = tokenService;
+    }
+
+    public async register(registerDto: RegisterDTO): Promise<TokenResponse> {
+        const existingUser = await this.#userModel
+            .findOne({ email: registerDto.email.toLowerCase() })
+            .exec();
+        
         if (existingUser) {
-            throw new ValidationError('Bu email adresi zaten kullanımda');
+            throw new AuthenticationError('Bu e-posta adresi zaten kullanımda');
         }
 
-        const user = new User(userData);
+        const user = await this.#userModel.create({
+            ...registerDto,
+            email: registerDto.email.toLowerCase()
+        });
+
+        return await this.generateTokenResponse(user);
+    }
+
+    public async login(loginDto: LoginDTO): Promise<TokenResponse> {
+        const user = await this.#userModel
+            .findOne({ email: loginDto.email.toLowerCase() })
+            .select('+password')
+            .exec();
+
+        if (!user) {
+            throw new AuthenticationError('Geçersiz e-posta veya şifre');
+        }
+
+        this.validateUserStatus(user);
+        await this.validateLoginAttempts(user);
+        await this.validatePassword(user, loginDto.password);
+
+        // Başarılı giriş
+        user.loginAttempts = 0;
+        user.lastLogin = new Date();
         await user.save();
 
-        const tokens = await this.generateAuthTokens(user.id);
-
-        return {
-            user: user.toJSON(),
-            tokens
-        };
+        return await this.generateTokenResponse(user);
     }
 
-    public async login(credentials: LoginDTO): Promise<{ user: any; tokens: TokenDTO }> {
-        const user = await User.findOne({ email: credentials.email });
+    public async refreshTokens(refreshToken: string): Promise<TokenResponse> {
+        const payload = this.#tokenService.verifyRefreshToken(refreshToken);
+        
+        const user = await this.#userModel
+            .findById(payload.userId)
+            .exec();
+
         if (!user) {
-            throw new AuthenticationError('Geçersiz email veya şifre');
+            throw new AuthenticationError('Kullanıcı bulunamadı');
         }
 
-        const isPasswordValid = await user.comparePassword(credentials.password);
+        this.validateUserStatus(user);
+        await this.#tokenService.revokeToken(refreshToken);
+        
+        return await this.generateTokenResponse(user);
+    }
+
+    public async logout(refreshToken: string): Promise<void> {
+        await this.#tokenService.revokeToken(refreshToken);
+    }
+
+    private validateUserStatus(user: IUser): void {
+        if (!user.isActive) {
+            throw new AuthenticationError('Hesabınız devre dışı bırakılmış');
+        }
+    }
+
+    private async validateLoginAttempts(user: IUser): Promise<void> {
+        if (user.loginAttempts >= MAX_LOGIN_ATTEMPTS) {
+            const lastAttemptTime = user.lastLogin || new Date(0);
+            const timeSinceLastAttempt = Date.now() - lastAttemptTime.getTime();
+
+            if (timeSinceLastAttempt < LOGIN_ATTEMPTS_WINDOW) {
+                throw new AuthenticationError('Çok fazla başarısız giriş denemesi. Lütfen daha sonra tekrar deneyin');
+            }
+            
+            user.loginAttempts = 0;
+            await user.save();
+        }
+    }
+
+    private async validatePassword(user: IUser, password: string): Promise<void> {
+        const isPasswordValid = await user.comparePassword(password);
+        
         if (!isPasswordValid) {
-            throw new AuthenticationError('Geçersiz email veya şifre');
+            user.loginAttempts += 1;
+            await user.save();
+            throw new AuthenticationError('Geçersiz e-posta veya şifre');
         }
+    }
 
-        const tokens = await this.generateAuthTokens(user.id);
+    private async generateTokenResponse(user: IUser): Promise<TokenResponse> {
+        const [accessToken, refreshToken] = await Promise.all([
+            this.#tokenService.generateAccessToken(user),
+            this.#tokenService.generateRefreshToken(user)
+        ]);
 
-        return {
-            user: user.toJSON(),
-            tokens
+        const userResponse: UserResponse = {
+            id: user._id?.toString() ?? '',
+            email: user.email,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            role: user.role
         };
-    }
-
-    public async refreshToken(refreshToken: string): Promise<TokenDTO> {
-        try {
-            const decoded = await verifyToken(refreshToken, 'refresh');
-            return await this.generateAuthTokens(decoded.userId);
-        } catch (error) {
-            throw new AuthenticationError('Geçersiz veya süresi dolmuş token');
-        }
-    }
-
-    public async logout(userId: string): Promise<void> {
-        // İleride redis ile token blacklist yapılabilir
-        return;
-    }
-
-    private async generateAuthTokens(userId: string): Promise<TokenDTO> {
-        const accessToken = await generateToken({ userId }, 'access');
-        const refreshToken = await generateToken({ userId }, 'refresh');
 
         return {
             accessToken,
             refreshToken,
-            expiresIn: parseInt(env.jwt.expiresIn)
+            user: userResponse
         };
     }
-} 
+}

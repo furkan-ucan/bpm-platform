@@ -1,3 +1,4 @@
+import { expect } from 'vitest'
 import { Types } from "mongoose";
 
 export function toBeValidId(received: any): jest.CustomMatcherResult {
@@ -12,11 +13,8 @@ export function toBeValidId(received: any): jest.CustomMatcherResult {
   };
 }
 
-// TypeScript için global tip tanımlamaları
-declare global {
-  namespace jest {
-    interface Matchers<R> {
-      toBeValidId(): R;
-    }
+declare module 'vitest' {
+  interface Assertion<T = any> {
+    toBeValidId(): T
   }
 }

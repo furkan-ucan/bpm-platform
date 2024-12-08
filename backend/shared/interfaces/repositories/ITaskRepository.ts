@@ -1,6 +1,7 @@
-import { Types } from 'mongoose';
-import { ITask } from '@/features/tasks/types/task.types';
-import { CreateTaskDTO, UpdateTaskDTO, TaskFilterDTO } from '@/shared/types/dtos/task.dto';
+import { type Types } from 'mongoose';
+
+import { type ITask } from '@/features/tasks/types/task.types';
+import { type CreateTaskDTO, type UpdateTaskDTO, type TaskFilterDTO } from '@/shared/types/dtos/task.dto';
 
 export interface ITaskRepository {
     create(data: CreateTaskDTO, userId: Types.ObjectId): Promise<ITask>;

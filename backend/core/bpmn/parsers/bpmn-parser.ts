@@ -1,9 +1,7 @@
-import { BPMNProcessDefinition } from '@/features/processes/types/process.types';
-
 export interface BPMNElement {
     id: string;
-    type: 'startEvent' | 'task' | 'endEvent' | 'userTask' | 'serviceTask';
-    name: string;
+    type: string;
+    name?: string;
     outgoing?: string[];
 }
 
@@ -13,26 +11,18 @@ export interface ParsedBPMN {
     elements: BPMNElement[];
 }
 
-export class BPMNParser {
-    public static parse(xml: string): ParsedBPMN {
-        // TODO: XML parsing implementation
-        const mockParsedBpmn: ParsedBPMN = {
-            id: `proc_${Date.now()}`,
-            name: 'Parsed Process',
-            elements: [
-                {
-                    id: 'task_1',
-                    type: 'userTask',
-                    name: 'User Task 1'
-                },
-                {
-                    id: 'task_2',
-                    type: 'serviceTask',
-                    name: 'Service Task 1'
-                }
-            ]
-        };
-
-        return mockParsedBpmn;
-    }
+export function parseBPMNXml(_xml: string): ParsedBPMN {
+    // Basit bir XML parser implementasyonu
+    return {
+        id: 'default',
+        name: 'Default Process',
+        elements: [
+            {
+                id: 'StartEvent_1',
+                type: 'startEvent',
+                name: 'Başlangıç',
+                outgoing: []
+            }
+        ]
+    };
 } 

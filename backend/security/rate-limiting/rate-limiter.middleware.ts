@@ -1,4 +1,5 @@
 import rateLimit from 'express-rate-limit';
+
 import { logger } from '../../monitoring/logging/providers/winston.logger';
 
 export const rateLimiter = rateLimit({

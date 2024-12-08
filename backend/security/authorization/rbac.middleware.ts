@@ -1,6 +1,7 @@
-import { Response, NextFunction } from 'express';
-import { AuthRequest } from '../authentication/auth.middleware';
+import { type Response, type NextFunction } from 'express';
+
 import logger from '../../monitoring/logging/providers/winston.logger';
+import { type AuthRequest } from '../authentication/auth.middleware';
 
 export const checkPermission = (requiredPermission: string) => {
     return async (req: AuthRequest, res: Response, next: NextFunction) => {

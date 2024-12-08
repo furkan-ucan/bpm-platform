@@ -1,6 +1,7 @@
-import { Request } from 'express';
-import { Document, Types } from 'mongoose';
-import { IUser } from '@/features/auth/models/user.model';
+import { type Request } from 'express';
+import { type Document, type Types } from 'mongoose';
+
+import { type IUser } from '@/features/auth/models/user.model';
 
 type AuthUser = Document<unknown, any, IUser> & 
     Omit<IUser, 'id'> & 

@@ -1,4 +1,5 @@
 import { Types } from "mongoose";
+import { vi } from 'vitest'
 
 export const generateObjectId = () => new Types.ObjectId();
 
@@ -10,6 +11,6 @@ export const createTestDate = (daysOffset = 0) => {
 
 export const mockMongooseDocument = (data: any) => ({
   ...data,
-  toObject: jest.fn().mockReturnValue(data),
-  toJSON: jest.fn().mockReturnValue(data),
+  toObject: vi.fn().mockReturnValue(data),
+  toJSON: vi.fn().mockReturnValue(data),
 });

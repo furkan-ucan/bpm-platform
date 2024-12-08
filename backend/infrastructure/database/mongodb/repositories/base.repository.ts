@@ -1,10 +1,11 @@
 import {
-  Model,
-  Document,
-  FilterQuery,
-  UpdateQuery,
-  QueryOptions,
+  type Model,
+  type Document,
+  type FilterQuery,
+  type UpdateQuery,
+  type QueryOptions,
 } from "mongoose";
+
 import { logger } from "@/monitoring/logging/providers/winston.logger";
 import {
   NotFoundError,
@@ -54,7 +55,7 @@ export abstract class BaseRepository<T extends Document> {
     filter: FilterQuery<T>,
     options: QueryOptions = {}
   ): Promise<T | null> {
-    return this.executeQuery(
+    return await this.executeQuery(
       () => this.model.findOne(filter, null, options).exec(),
       { method: "findOne" }
     );
@@ -64,7 +65,7 @@ export abstract class BaseRepository<T extends Document> {
     filter: FilterQuery<T> = {},
     options: QueryOptions = {}
   ): Promise<{ items: T[]; total: number }> {
-    return this.executeQuery(
+    return await this.executeQuery(
       async () => {
         const [items, total] = await Promise.all([
           this.model.find(filter, null, options).exec(),
@@ -77,7 +78,7 @@ export abstract class BaseRepository<T extends Document> {
   }
 
   async create(data: Partial<T>): Promise<T> {
-    return this.executeQuery(() => this.model.create(data), {
+    return await this.executeQuery(() => this.model.create(data), {
       method: "create",
     });
   }
@@ -115,7 +116,7 @@ export abstract class BaseRepository<T extends Document> {
   }
 
   async exists(filter: FilterQuery<T>): Promise<boolean> {
-    return this.executeQuery(
+    return await this.executeQuery(
       () => this.model.exists(filter).then((result) => !!result),
       { method: "exists" }
     );

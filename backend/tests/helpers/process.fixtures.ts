@@ -1,7 +1,8 @@
 import { Types, Document } from "mongoose";
-import { IProcess } from "../../features/processes/models/process.model";
-import { ProcessStatus } from "../../features/processes/types/process.types";
+
 import { createMockMongooseDocument } from "./mongoose.fixtures";
+import { type IProcess } from "../../features/processes/models/process.model";
+import { type ProcessStatus } from "../../features/processes/types/process.types";
 
 interface MockProcessOptions {
   _id?: Types.ObjectId;

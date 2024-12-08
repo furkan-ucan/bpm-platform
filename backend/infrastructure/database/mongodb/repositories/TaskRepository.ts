@@ -1,10 +1,11 @@
-import { Model, Types } from 'mongoose';
-import { ITaskRepository } from '@/shared/interfaces/repositories/ITaskRepository';
+import { type Model, type Types } from 'mongoose';
+
 import { Task } from '@/features/tasks/models/task.model';
-import { ITask } from '@/features/tasks/types/task.types';
-import { CreateTaskDTO, UpdateTaskDTO, TaskFilterDTO } from '@/shared/types/dtos/task.dto';
+import { type ITask } from '@/features/tasks/types/task.types';
 import { NotFoundError } from '@/shared/errors/types/app-error';
 import { ValidationError } from '@/shared/errors/types/validation-error';
+import { type ITaskRepository } from '@/shared/interfaces/repositories/ITaskRepository';
+import { type CreateTaskDTO, type UpdateTaskDTO, type TaskFilterDTO } from '@/shared/types/dtos/task.dto';
 import { logger } from '@/shared/utils/logger';
 
 export class TaskRepository implements ITaskRepository {

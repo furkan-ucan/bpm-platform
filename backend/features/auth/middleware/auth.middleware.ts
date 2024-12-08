@@ -1,8 +1,10 @@
-import { Request, Response, NextFunction } from 'express';
-import { Document, Types } from 'mongoose';
+import { type Request, type Response, type NextFunction } from 'express';
+import { type Document, type Types } from 'mongoose';
+
 import { verifyToken } from '@/security/authentication/providers/jwt.provider';
 import { AuthenticationError, AuthorizationError } from '@/shared/errors/types/app-error';
-import { User, IUser } from '../models/user.model';
+
+import { User, type IUser } from '../models/user.model';
 
 export interface AuthenticatedRequest extends Request {
     user: Document<unknown, any, IUser> & IUser & {
@@ -29,7 +31,7 @@ export const authenticate = async (
             throw new AuthenticationError('Kullanıcı bulunamadı veya aktif değil');
         }
 
-        (req as AuthenticatedRequest).user = user as Document<unknown, any, IUser> & IUser & { _id: Types.ObjectId };
+        (req as AuthenticatedRequest).user = user;
         next();
     } catch (error) {
         next(error);

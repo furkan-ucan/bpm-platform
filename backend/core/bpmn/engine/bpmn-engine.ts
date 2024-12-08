@@ -1,118 +1,55 @@
-import { ParsedBPMN, BPMNElement } from '../parsers/bpmn-parser';
-import { logger } from '@/shared/utils/logger';
-import { ProcessInstance } from '@/features/processes/types/process.types';
-import { AppError } from '@/shared/errors/types/app-error';
+import { type ParsedBPMN } from '../parsers/bpmn-parser';
+
+interface ProcessInstance {
+    id: string;
+    processId: string;
+    currentElement: any;
+    status: 'active' | 'completed' | 'terminated';
+    variables: Record<string, any>;
+    history: Array<{
+        elementId: string;
+        type: string;
+        timestamp: Date;
+        data?: Record<string, any>;
+    }>;
+    createdAt: Date;
+}
 
 export class BPMNEngine {
-    private instances: Map<string, any> = new Map();
+    private instances: Map<string, ProcessInstance> = new Map();
 
-    constructor() {
-        this.instances = new Map();
-    }
+    async startProcess(bpmn: ParsedBPMN, context: { processId: any; userId: any; }): Promise<ProcessInstance> {
+        const instanceId = `PROC_${context.processId}`;
+        const instance: ProcessInstance = {
+            id: instanceId,
+            processId: context.processId.toString(),
+            currentElement: bpmn.elements[0],
+            status: 'active',
+            variables: {},
+            history: [],
+            createdAt: new Date()
+        };
 
-    public async startProcess(
-        processDefinition: ParsedBPMN,
-        variables: Record<string, any> = {}
-    ): Promise<ProcessInstance> {
-        try {
-            const instanceId = `PROC_${processDefinition.id}`;
-            const instance: ProcessInstance = {
-                id: instanceId,
-                processId: processDefinition.id,
-                currentElement: this.findStartEvent(processDefinition),
-                status: 'active',
-                variables,
-                history: [],
-                createdAt: new Date()
-            };
-
-            this.instances.set(instanceId, instance);
-            logger.info('Süreç başlatıldı', { instanceId });
-
-            return instance;
-        } catch (error) {
-            logger.error('Süreç başlatma hatası:', error);
-            throw new AppError('Süreç başlatılamadı', 500);
-        }
-    }
-
-    public async executeTask(
-        instanceId: string, 
-        taskId: string,
-        taskData: Record<string, any> = {}
-    ): Promise<void> {
-        const instance = this.instances.get(instanceId);
-        if (!instance) {
-            throw new AppError('Süreç örneği bulunamadı', 404);
-        }
-
-        try {
-            // Task yürütme mantığı
-            instance.variables = { ...instance.variables, ...taskData };
-            instance.history.push({
-                elementId: taskId,
-                type: 'taskCompleted',
-                timestamp: new Date(),
-                data: taskData
-            });
-
-            // Bir sonraki elemente geç
-            const nextElement = this.findNextElement(instance.currentElement);
-            if (nextElement) {
-                instance.currentElement = nextElement;
-            } else {
-                instance.status = 'completed';
-            }
-
-            this.instances.set(instanceId, instance);
-            logger.info('Task tamamlandı', { instanceId, taskId });
-        } catch (error) {
-            logger.error('Task yürütme hatası:', error);
-            throw new AppError('Task yürütülemedi', 500);
-        }
-    }
-
-    private findStartEvent(processDefinition: ParsedBPMN): BPMNElement {
-        const startEvent = processDefinition.elements.find(
-            element => element.type === 'startEvent'
-        );
-        if (!startEvent) {
-            throw new AppError('Başlangıç olayı bulunamadı', 400);
-        }
-        return startEvent;
-    }
-
-    private findNextElement(currentElement: BPMNElement): BPMNElement | null {
-        // Akış mantığı implementasyonu
-        return null;
-    }
-
-    public getInstanceStatus(instanceId: string): string {
-        const instance = this.instances.get(instanceId);
-        if (!instance) {
-            throw new AppError('Süreç örneği bulunamadı', 404);
-        }
-        return instance.status;
-    }
-
-    public async stopInstance(instanceId: string): Promise<void> {
-        const instance = this.instances.get(instanceId);
-        if (!instance) {
-            throw new AppError('Süreç örneği bulunamadı', 404);
-        }
-        instance.status = 'stopped';
-        this.instances.delete(instanceId);
-        logger.info('Süreç durduruldu', { instanceId });
-    }
-
-    public async updateInstanceStatus(instanceId: string, status: string): Promise<void> {
-        const instance = this.instances.get(instanceId);
-        if (!instance) {
-            throw new AppError('Süreç örneği bulunamadı', 404);
-        }
-        
-        instance.status = status;
         this.instances.set(instanceId, instance);
-        logger.info('Süreç durumu güncellendi', { instanceId, status });
+        console.info('Process instance started', { instanceId, processId: context.processId });
+        return instance;
+    }
+
+    getInstanceStatus(instanceId: string): string {
+        const instance = this.instances.get(instanceId);
+        return instance?.status || 'unknown';
+    }
+
+    async updateInstanceStatus(instanceId: string, status: string): Promise<void> {
+        const instance = this.instances.get(instanceId);
+        if (instance) {
+            instance.status = status as 'active' | 'completed' | 'terminated';
+            this.instances.set(instanceId, instance);
+        }
+    }
+
+    async stopInstance(instanceId: string): Promise<void> {
+        this.instances.delete(instanceId);
+        console.info('Process instance stopped', { instanceId });
     }
 } 
