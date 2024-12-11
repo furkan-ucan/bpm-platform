@@ -1,26 +1,29 @@
-import { type BPMNElement } from '@/core/bpmn/parsers/bpmn-parser';
+import { type BPMNElement } from "@/core/bpmn/parsers/bpmn-parser";
+import { Types } from "mongoose";
 
 export enum ProcessStatus {
   DRAFT = 'draft',
-  PENDING = 'pending',
   ACTIVE = 'active',
   INACTIVE = 'inactive',
+  PENDING = 'pending',
   COMPLETED = 'completed',
-  CANCELLED = 'cancelled'
+  CANCELLED = 'cancelled',
+  ARCHIVED = 'archived'
 }
 
-export type StepType = 'task' | 'approval' | 'notification';
-export type StepStatus = 'pending' | 'completed' | 'rejected';
+export type StepType = "task" | "approval" | "notification";
+export type StepStatus = "pending" | "completed" | "rejected";
 
 export interface ProcessStep {
-  id: string;
-  elementId: string;
+  id?: string;
+  elementId?: string;
   name: string;
-  type: StepType;
-  status: StepStatus;
-  assignedTo?: string;
+  type: 'task' | 'approval' | 'notification';
+  status: 'pending' | 'completed' | 'rejected';
+  assignedTo?: Types.ObjectId;
   dueDate?: Date;
-  completedAt?: Date;
+  sequence: number;
+  dependsOn: string[];
   data?: Record<string, any>;
 }
 
@@ -29,8 +32,9 @@ export interface ProcessHistoryEntry {
   type: string;
   timestamp: Date;
   userId?: string;
-  stepId?: string;
+  stepId: string;
   status?: StepStatus;
+  action: string;
   data?: Record<string, any>;
 }
 

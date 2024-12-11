@@ -2,6 +2,8 @@ import { type Request, type Response, type NextFunction } from 'express';
 import { body, query, param, validationResult } from 'express-validator';
 
 import { ValidationError } from '@/shared/errors/types/app-error';
+import { UpdateProcessDTO } from "@/shared/types/dtos/process.dto";
+import { ProcessStatus } from "../types/process.types";
 
 const handleValidationErrors = (req: Request, res: Response, next: NextFunction) => {
     const errors = validationResult(req);
@@ -72,4 +74,18 @@ export const validateProcessId = [
         .isMongoId()
         .withMessage('Geçersiz süreç ID'),
     handleValidationErrors
-]; 
+];
+
+export class ProcessValidator {
+    static validateUpdateData(data: UpdateProcessDTO) {
+        if (!data.updatedAt) {
+            throw new ValidationError("updatedAt alanı zorunludur");
+        }
+    }
+
+    static validateStatus(status: string) {
+        if (!Object.values(ProcessStatus).includes(status as ProcessStatus)) {
+            throw new ValidationError("Geçersiz süreç durumu");
+        }
+    }
+} 

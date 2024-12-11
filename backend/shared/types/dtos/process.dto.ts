@@ -19,6 +19,8 @@ export interface UpdateProcessDTO {
   bpmnXml?: string;
   status?: ProcessStatus;
   isTemplate?: boolean;
+  lastUpdated: Date;
+  updatedAt: Date; // Required
 }
 
 export interface ProcessStepDTO {

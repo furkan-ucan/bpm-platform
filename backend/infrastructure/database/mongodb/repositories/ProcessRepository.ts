@@ -33,10 +33,10 @@ export class ProcessRepository implements IProcessRepository {
 
             return await process.save();
         } catch (error: any) {
-            logger.error('Repository error:', { 
-                error, 
+            logger.error('Repository error:', {
+                error,
                 method: 'create',
-                processName: data.name 
+                processName: data.name
             });
 
             if (error.code === 11000) {
@@ -58,12 +58,12 @@ export class ProcessRepository implements IProcessRepository {
 
             return process;
         } catch (error: any) {
-            logger.error('Repository error:', { 
-                error, 
+            logger.error('Repository error:', {
+                error,
                 method: 'findById',
-                processId: id 
+                processId: id
             });
-            
+
             if (error.name === 'CastError') {
                 throw new ValidationError('Geçersiz süreç ID formatı');
             }
@@ -102,11 +102,11 @@ export class ProcessRepository implements IProcessRepository {
     async update(id: string, data: UpdateProcessDTO, userId: Types.ObjectId): Promise<IProcess> {
         try {
             if (data.name) {
-                const existingProcess = await this.model.findOne({ 
+                const existingProcess = await this.model.findOne({
                     name: { $regex: `^${data.name}$`, $options: 'i' },
                     _id: { $ne: new Types.ObjectId(id) }
                 });
-                
+
                 if (existingProcess) {
                     throw new ValidationError(`"${data.name}" isimli başka bir süreç zaten var`);
                 }
@@ -139,5 +139,9 @@ export class ProcessRepository implements IProcessRepository {
     async exists(id: string): Promise<boolean> {
         const count = await this.model.countDocuments({ _id: id });
         return count > 0;
+    }
+
+    async findByName(name: string): Promise<IProcess | null> {
+        return this.model.findOne({ name });
     }
 } 

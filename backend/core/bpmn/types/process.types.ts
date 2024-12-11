@@ -1,5 +1,5 @@
-import { type BPMNElement } from '../parsers/bpmn-parser';
-import { type ProcessHistoryEntry } from '@/features/processes/types/process.types';
+import { type BPMNElement } from "../parsers/bpmn-parser";
+import { type ProcessHistoryEntry } from "@/features/processes/types/process.types";
 
 export interface ProcessContext {
   processId: string;
@@ -8,11 +8,11 @@ export interface ProcessContext {
 }
 
 export enum ProcessInstanceStatus {
-    ACTIVE = 'active',
-    INACTIVE = 'inactive',
-    COMPLETED = 'completed',
-    FAILED = 'failed',
-    SUSPENDED = 'suspended'
+  ACTIVE = "active",
+  INACTIVE = "inactive",
+  COMPLETED = "completed",
+  FAILED = "failed",
+  SUSPENDED = "suspended",
 }
 
 export interface ProcessInstance {

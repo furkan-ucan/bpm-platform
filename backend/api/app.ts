@@ -1,5 +1,5 @@
 import cors from 'cors';
-import express, { type Application } from 'express';
+import express, { type Application, type Request, type Response, type NextFunction } from 'express';
 import helmet from 'helmet';
 
 import { env } from '@/config';
@@ -7,7 +7,7 @@ import { authRoutes } from '@/features/auth/routes/auth.routes';
 import { processRoutes } from '@/features/processes/routes/process.routes';
 import taskRoutes from '@/features/tasks/routes/task.routes';
 import { DatabaseConnection } from '@/infrastructure/database/mongodb/connections/connection';
-import { errorHandler } from '@/shared/errors/handlers/error-handler';
+import { errorHandler } from '@/shared/middlewares/error-handler.middleware';
 
 import { requestLogger } from './middleware/request-logger';
 
