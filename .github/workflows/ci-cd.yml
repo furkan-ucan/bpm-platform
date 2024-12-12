@@ -2,9 +2,9 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
   pull_request:
-    branches: [ main, develop ]
+    branches: [main, develop]
 
 env:
   HEROKU_STAGING_APP: "bpm-platform-staging"
@@ -14,83 +14,83 @@ jobs:
   test:
     name: 🧪 Test
     runs-on: ubuntu-latest
-    
+
     strategy:
       matrix:
         node-version: [20.x]
 
     steps:
-    - uses: actions/checkout@v3
-    
-    - name: Use Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v3
-      with:
-        node-version: ${{ matrix.node-version }}
-        cache: 'npm'
-        cache-dependency-path: './backend/package-lock.json'
-    
-    - name: Install Dependencies
-      working-directory: ./backend
-      run: npm ci
-    
-    - name: Lint Check
-      working-directory: ./backend
-      run: npm run lint
-    
-    - name: Run Tests
-      working-directory: ./backend
-      run: npm test
-    
-    - name: Upload Coverage
-      uses: codecov/codecov-action@v3
-      with:
-        directory: ./backend/coverage
-        flags: unittests
+      - uses: actions/checkout@v3
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: "npm"
+          cache-dependency-path: "./backend/package-lock.json"
+
+      - name: Install Dependencies
+        working-directory: ./backend
+        run: npm ci
+
+      - name: Lint Check
+        working-directory: ./backend
+        run: npm run lint
+
+      - name: Run Tests
+        working-directory: ./backend
+        run: npm test
+
+      - name: Upload Coverage
+        uses: codecov/codecov-action@v3
+        with:
+          directory: ./backend/coverage
+          flags: unittests
 
   security:
     name: 🛡️ Security Check
     runs-on: ubuntu-latest
-    
+
     steps:
-    - uses: actions/checkout@v3
-    
-    - name: Run Snyk to check for vulnerabilities
-      uses: snyk/actions/node@master
-      if: success()
-      env:
-        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-      with:
-        args: --severity-threshold=high
+      - uses: actions/checkout@v3
+
+      - name: Run NPM Security Audit
+        working-directory: ./backend
+        run: npm audit
+
+      - name: Run ESLint Security Rules
+        working-directory: ./backend
+        run: npm run lint
 
   build:
     name: 🏗️ Build
     needs: [test, security]
     runs-on: ubuntu-latest
     if: github.event_name == 'push'
-    
-    steps:
-    - uses: actions/checkout@v3
-    
-    - name: Set up Node.js
-      uses: actions/setup-node@v3
-      with:
-        node-version: '20.x'
-        cache: 'npm'
-        cache-dependency-path: './backend/package-lock.json'
-    
-    - name: Install Dependencies
-      working-directory: ./backend
-      run: npm ci
-    
-    - name: Build
-      working-directory: ./backend
-      run: npm run build
 
-    - name: Upload Build Artifact
-      uses: actions/upload-artifact@v3
-      with:
-        name: dist
-        path: backend/dist
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "20.x"
+          cache: "npm"
+          cache-dependency-path: "./backend/package-lock.json"
+
+      - name: Install Dependencies
+        working-directory: ./backend
+        run: npm ci
+
+      - name: Build
+        working-directory: ./backend
+        run: npm run build
+
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: dist
+          path: backend/dist
 
   deploy-staging:
     name: 🚀 Deploy to Staging
@@ -100,69 +100,67 @@ jobs:
     environment:
       name: staging
       url: https://bpm-platform-staging.herokuapp.com
-    
+
     steps:
-    - uses: actions/checkout@v3
-    - uses: actions/download-artifact@v3
-      with:
-        name: dist
-        path: backend/dist
-    
-    - name: Deploy to Heroku Staging
-      uses: akhileshns/heroku-deploy@v3.12.14
-      with:
-        heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
-        heroku_app_name: ${{ env.HEROKU_STAGING_APP }}
-        heroku_email: ${{ secrets.HEROKU_EMAIL }}
-        branch: develop
+      - uses: actions/checkout@v3
+      - uses: actions/download-artifact@v3
+        with:
+          name: dist
+          path: backend/dist
+
+      - name: Deploy to Heroku Staging
+        uses: akhileshns/heroku-deploy@v3.12.14
+        with:
+          heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
+          heroku_app_name: ${{ env.HEROKU_STAGING_APP }}
+          heroku_email: ${{ secrets.HEROKU_EMAIL }}
 
   deploy-production:
     name: 🚀 Deploy to Production
-    needs: build
+    needs: [deploy-staging]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
     environment:
       name: production
       url: https://bpm-platform.herokuapp.com
-    
+
     steps:
-    - uses: actions/checkout@v3
-    - uses: actions/download-artifact@v3
-      with:
-        name: dist
-        path: backend/dist
-    
-    - name: Deploy to Heroku Production
-      uses: akhileshns/heroku-deploy@v3.12.14
-      with:
-        heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
-        heroku_app_name: ${{ env.HEROKU_PROD_APP }}
-        heroku_email: ${{ secrets.HEROKU_EMAIL }}
-        branch: main
+      - uses: actions/checkout@v3
+      - uses: actions/download-artifact@v3
+        with:
+          name: dist
+          path: backend/dist
+
+      - name: Deploy to Heroku Production
+        uses: akhileshns/heroku-deploy@v3.12.14
+        with:
+          heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
+          heroku_app_name: ${{ env.HEROKU_PROD_APP }}
+          heroku_email: ${{ secrets.HEROKU_EMAIL }}
 
   notify:
     name: 📢 Notify
-    needs: [build, deploy-staging, deploy-production]
+    needs: [deploy-staging, deploy-production]
     runs-on: ubuntu-latest
     if: always()
-    
+
     steps:
-    - name: Notify Success
-      if: success()
-      uses: rtCamp/action-slack-notify@v2
-      env:
-        SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
-        SLACK_CHANNEL: deployments
-        SLACK_TITLE: "Deployment Status"
-        SLACK_COLOR: good
-        SLACK_MESSAGE: "🎉 Pipeline completed successfully!"
-    
-    - name: Notify Failure
-      if: failure()
-      uses: rtCamp/action-slack-notify@v2
-      env:
-        SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
-        SLACK_CHANNEL: deployments
-        SLACK_TITLE: "Deployment Status"
-        SLACK_COLOR: danger
-        SLACK_MESSAGE: "❌ Pipeline failed!"
+      - name: Notify Success
+        if: success()
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_CHANNEL: deployments
+          SLACK_TITLE: "Deployment Status"
+          SLACK_COLOR: good
+          SLACK_MESSAGE: "🎉 Pipeline completed successfully!"
+
+      - name: Notify Failure
+        if: failure()
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_CHANNEL: deployments
+          SLACK_TITLE: "Deployment Status"
+          SLACK_COLOR: danger
+          SLACK_MESSAGE: "❌ Pipeline failed!"
