@@ -314,7 +314,9 @@ describe("ProcessService", () => {
       ).rejects.toThrow(ValidationError);
 
       expect(processRepository.findById).toHaveBeenCalledWith(mockProcessId);
-      expect(processRepository.findByName).toHaveBeenCalledWith(updateData.name);
+      expect(processRepository.findByName).toHaveBeenCalledWith(
+        updateData.name,
+      );
     });
 
     it("should allow update if name is unchanged", async () => {

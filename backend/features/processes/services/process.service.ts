@@ -23,7 +23,7 @@ import {
 import { ProcessValidator } from "../validators/process.validator";
 import { NotFoundError } from "@/shared/errors/types/app-error.js";
 import { DomainErrorHandler } from "@/shared/errors/handlers/error-handler.js";
-import { ProcessMapper } from '../mappers/process.mapper';
+import { ProcessMapper } from "../mappers/process.mapper";
 import { IProcess } from "../models/process.model.js";
 import { AppError, BusinessError } from "@/shared/errors/types/app-error.js";
 import { ERROR_MESSAGES } from "@/shared/constants/error-messages.js";
@@ -57,7 +57,9 @@ export class ProcessService {
     userId: Types.ObjectId,
   ) {
     try {
-      const existingProcess = await this.processRepository.findByName(processDTO.name);
+      const existingProcess = await this.processRepository.findByName(
+        processDTO.name,
+      );
       if (existingProcess) {
         throw new ValidationError(ERROR_MESSAGES.PROCESS.NAME_EXISTS);
       }
@@ -69,19 +71,19 @@ export class ProcessService {
         await this.bpmnEngine.startProcess(parsedBpmn, {
           processId: process._id.toString(),
           userId: userId.toString(),
-          variables: {}
+          variables: {},
         });
       } catch (error) {
-        logger.error('BPMN Engine hatası:', { error, processId: process._id });
+        logger.error("BPMN Engine hatası:", { error, processId: process._id });
         throw new BusinessError(ERROR_MESSAGES.PROCESS.CREATION_FAILED);
       }
 
       return process;
     } catch (error) {
-      logger.error('Süreç oluşturma hatası:', {
+      logger.error("Süreç oluşturma hatası:", {
         error,
         processName: processDTO.name,
-        userId: userId.toString()
+        userId: userId.toString(),
       });
 
       if (error instanceof AppError) {
@@ -119,9 +121,9 @@ export class ProcessService {
       };
     } catch (error) {
       DomainErrorHandler.handle(error, {
-        domain: 'Process',
-        action: 'getById',
-        resourceId: id
+        domain: "Process",
+        action: "getById",
+        resourceId: id,
       });
     }
   }
@@ -130,7 +132,9 @@ export class ProcessService {
     try {
       const result = await this.processRepository.findAll(filters);
       return {
-        processes: result.processes.map(process => ProcessMapper.toDTO(process)),
+        processes: result.processes.map((process) =>
+          ProcessMapper.toDTO(process),
+        ),
         pagination: {
           total: result.total,
           page: filters.page || 0,
@@ -140,9 +144,9 @@ export class ProcessService {
       };
     } catch (error) {
       DomainErrorHandler.handle(error, {
-        domain: 'Process',
-        action: 'getAll',
-        userId: filters.createdBy
+        domain: "Process",
+        action: "getAll",
+        userId: filters.createdBy,
       });
     }
   }
@@ -161,7 +165,9 @@ export class ProcessService {
       }
 
       if (data.name && data.name !== existingProcess.name) {
-        const processWithSameName = await this.processRepository.findByName(data.name);
+        const processWithSameName = await this.processRepository.findByName(
+          data.name,
+        );
         if (processWithSameName && processWithSameName._id.toString() !== id) {
           throw new ValidationError(ERROR_MESSAGES.PROCESS.NAME_EXISTS);
         }
@@ -170,12 +176,13 @@ export class ProcessService {
       const process = await this.processRepository.update(id, data, userId);
       return ProcessMapper.toDTO(process);
     } catch (error) {
-      DomainErrorHandler.handle(error, {
-        domain: 'Process',
-        action: 'update',
-        resourceId: id,
-        userId: userId.toString()
+      logger.error("Süreç oluşturma hatası:", {
+        error,
+        processName: data.name,
       });
+      throw error instanceof ValidationError
+        ? error
+        : new ValidationError(ERROR_MESSAGES.PROCESS.CREATION_FAILED);
     }
   }
 
@@ -200,9 +207,9 @@ export class ProcessService {
       return { message: "Süreç başarıyla silindi" };
     } catch (error) {
       DomainErrorHandler.handle(error, {
-        domain: 'Process',
-        action: 'delete',
-        resourceId: id
+        domain: "Process",
+        action: "delete",
+        resourceId: id,
       });
     }
   }
@@ -223,7 +230,7 @@ export class ProcessService {
       try {
         await this.bpmnEngine.updateInstanceStatus(
           instanceId,
-          status.toUpperCase() as ProcessInstanceStatus
+          status.toUpperCase() as ProcessInstanceStatus,
         );
       } catch (error) {
         throw new TechnicalError(ERROR_MESSAGES.ENGINE.UPDATE_FAILED);
@@ -236,21 +243,23 @@ export class ProcessService {
           updatedAt: new Date(),
           lastUpdated: new Date(),
         },
-        process._id
+        process._id,
       );
     } catch (error) {
       DomainErrorHandler.handle(error, {
-        domain: 'Process',
-        action: 'updateStatus',
+        domain: "Process",
+        action: "updateStatus",
         resourceId: id,
-        userId: process?._id.toString()
+        userId: process?._id.toString(),
       });
     }
   }
 
   public async startProcess(processId: Types.ObjectId, userId: Types.ObjectId) {
     try {
-      const process = await this.processRepository.findById(processId.toString());
+      const process = await this.processRepository.findById(
+        processId.toString(),
+      );
       if (!process) {
         throw new NotFoundError(ERROR_MESSAGES.PROCESS.NOT_FOUND);
       }
@@ -266,10 +275,10 @@ export class ProcessService {
       return instance;
     } catch (error) {
       DomainErrorHandler.handle(error, {
-        domain: 'Process',
-        action: 'start',
+        domain: "Process",
+        action: "start",
         resourceId: processId.toString(),
-        userId: userId.toString()
+        userId: userId.toString(),
       });
     }
   }
@@ -321,7 +330,9 @@ export class ProcessService {
     }));
   }
 
-  public async getInstanceHistory(processId: string): Promise<ProcessHistoryEntry[]> {
+  public async getInstanceHistory(
+    processId: string,
+  ): Promise<ProcessHistoryEntry[]> {
     try {
       const process = await this.processRepository.findById(processId);
       if (!process) {
@@ -334,15 +345,17 @@ export class ProcessService {
       return this.mapInstanceHistoryToProcessHistory(instance.history || []);
     } catch (error) {
       DomainErrorHandler.handle(error, {
-        domain: 'Process',
-        action: 'getHistory',
-        resourceId: processId
+        domain: "Process",
+        action: "getHistory",
+        resourceId: processId,
       });
       return [];
     }
   }
 
-  public async createProcessInstance(processId: string): Promise<{ instanceId: string }> {
+  public async createProcessInstance(
+    processId: string,
+  ): Promise<{ instanceId: string }> {
     try {
       const process = await this.processRepository.findById(processId);
       if (!process) {
@@ -365,9 +378,9 @@ export class ProcessService {
       };
     } catch (error) {
       DomainErrorHandler.handle(error, {
-        domain: 'Process',
-        action: 'createInstance',
-        resourceId: processId
+        domain: "Process",
+        action: "createInstance",
+        resourceId: processId,
       });
       throw new TechnicalError(ERROR_MESSAGES.PROCESS.CREATION_FAILED);
     }

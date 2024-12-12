@@ -9,7 +9,9 @@
     "test": "vitest",
     "test:watch": "vitest --watch",
     "test:coverage": "vitest --coverage",
-    "test:ui": "vitest --ui"
+    "test:ui": "vitest --ui",
+    "type-check": "tsc --noEmit",
+    "lint": "eslint '**/*.{js,ts}' --config eslint.config.js"
   },
   "dependencies": {
     "@types/redis": "^4.0.10",
