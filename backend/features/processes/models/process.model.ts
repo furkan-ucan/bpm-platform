@@ -31,25 +31,79 @@ export interface IProcess {
 
 // Süreç adımları için schema
 const ProcessStepSchema = new Schema<ProcessStep>({
-  id: { type: String },
-  elementId: { type: String },
-  name: { type: String, required: true },
+  id: {
+    type: String,
+    index: true
+  },
+  elementId: {
+    type: String,
+    index: true
+  },
+  name: {
+    type: String,
+    required: true,
+    trim: true
+  },
   type: {
     type: String,
-    enum: ["task", "approval", "notification"],
+    enum: ["task", "approval", "notification", "automation", "decision"],
     required: true,
+    index: true
   },
   status: {
     type: String,
     enum: ["pending", "completed", "rejected"],
     default: "pending",
+    index: true
   },
-  assignedTo: { type: Schema.Types.ObjectId, ref: "User" },
-  dueDate: { type: Date },
-  sequence: { type: Number, required: true },
-  dependsOn: [{ type: String }],
-  data: { type: Schema.Types.Mixed }
+  priority: {
+    type: String,
+    enum: ["low", "medium", "high"],
+    default: "medium"
+  },
+  assignedTo: {
+    type: Schema.Types.ObjectId,
+    ref: "User",
+    index: true
+  },
+  dueDate: {
+    type: Date,
+    index: true
+  },
+  startedAt: {
+    type: Date
+  },
+  completedAt: {
+    type: Date
+  },
+  sequence: {
+    type: Number,
+    required: true,
+    index: true
+  },
+  dependsOn: [{
+    type: String,
+    index: true
+  }],
+  notes: {
+    type: String
+  },
+  metadata: {
+    estimatedDuration: { type: Number },
+    costCenter: { type: String },
+    tags: [{ type: String }]
+  },
+  data: {
+    type: Schema.Types.Mixed
+  }
+}, {
+  timestamps: true
 });
+
+// İndexler
+ProcessStepSchema.index({ type: 1, status: 1 });
+ProcessStepSchema.index({ assignedTo: 1, status: 1 });
+ProcessStepSchema.index({ dueDate: 1, status: 1 });
 
 // Ana süreç schema'sı
 const ProcessSchema = new Schema<IProcess>({

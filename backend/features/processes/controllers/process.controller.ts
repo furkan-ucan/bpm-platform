@@ -5,8 +5,8 @@ import {
 } from '@/shared/types/auth';
 import { AuthenticationError } from '@/shared/errors/common/authentication.error';
 import { ProcessOperationError } from '../errors/process.errors';
-import { PROCESS_ERROR_MESSAGES } from '../errors/messages';
 import { ProcessService } from '../services/process.service';
+import { ERROR_MESSAGES } from '@/shared/constants/error-messages';
 import {
     type CreateProcessDTO,
     type UpdateProcessDTO,
@@ -92,7 +92,7 @@ export class ProcessController {
             const result = await this.processService.deleteProcess(req.params.id);
 
             if (!result) {
-                throw new ProcessOperationError(PROCESS_ERROR_MESSAGES.DELETE_FAILED);
+                throw new ProcessOperationError(ERROR_MESSAGES.PROCESS.DELETE_FAILED);
             }
 
             res.status(200).json({

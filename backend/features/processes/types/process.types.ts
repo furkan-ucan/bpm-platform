@@ -13,17 +13,27 @@ export enum ProcessStatus {
 
 export type StepType = "task" | "approval" | "notification" | "automation" | "decision";
 export type StepStatus = "pending" | "completed" | "rejected";
+export type StepPriority = "low" | "medium" | "high";
 
 export interface ProcessStep {
   id?: string;
   elementId?: string;
   name: string;
-  type: StepType;  // Burada StepType'ı kullanıyoruz
+  type: StepType;
   status: StepStatus;
+  priority?: StepPriority;
   assignedTo?: Types.ObjectId;
   dueDate?: Date;
+  startedAt?: Date;
+  completedAt?: Date;
   sequence: number;
   dependsOn: string[];
+  notes?: string;
+  metadata?: {
+    estimatedDuration?: number;
+    costCenter?: string;
+    tags?: string[];
+  };
   data?: Record<string, any>;
 }
 

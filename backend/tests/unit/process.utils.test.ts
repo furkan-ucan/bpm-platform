@@ -9,38 +9,40 @@ import {
 
 import type { BPMNElement } from "../../core/bpmn/parsers/bpmn-parser";
 import type { IProcess } from "../../features/processes/models/process.model";
-import { createExpectedProcessDTO, createMockProcess, createBpmnElement, createExpectedProcessStep } from "../helpers/process.fixtures";
+import {
+  createExpectedProcessDTO,
+  createMockProcess,
+  createBpmnElement,
+  createExpectedProcessStep,
+  type ProcessStepOverrides
+} from "../helpers/process.fixtures";
 
 describe("Process Utils", () => {
   describe("convertBpmnToProcessSteps", () => {
-    it("should convert BPMN elements to process steps", () => {
-      const elements = [
-        createBpmnElement({ id: "task1", name: "Task 1", type: "userTask" }),
-        createBpmnElement({ id: "notification1", name: "Notification 1", type: "serviceTask" }),
-        createBpmnElement({ id: "approval1", name: "Approval 1", type: "approvalTask" })
-      ];
+    const createTestElements = (...elements: Array<Partial<BPMNElement>>) =>
+      elements.map(el => createBpmnElement(el));
 
+    const assertProcessSteps = (elements: BPMNElement[], expectedSteps: Array<ProcessStepOverrides>) => {
       const result = convertBpmnToProcessSteps(elements);
-
-      expect(result).toEqual([
+      expect(result).toEqual(expectedSteps.map((step, index) =>
         createExpectedProcessStep({
-          elementId: "task1",
-          name: "Task 1",
-          type: "task",
-          sequence: 1
-        }),
-        createExpectedProcessStep({
-          elementId: "notification1",
-          name: "Notification 1",
-          type: "notification",
-          sequence: 2
-        }),
-        createExpectedProcessStep({
-          elementId: "approval1",
-          name: "Approval 1",
-          type: "approval",
-          sequence: 3
+          ...step,
+          sequence: index + 1
         })
+      ));
+    };
+
+    it("should convert BPMN elements to process steps", () => {
+      const elements = createTestElements(
+        { id: "task1", name: "Task 1", type: "userTask" },
+        { id: "notification1", name: "Notification 1", type: "serviceTask" },
+        { id: "approval1", name: "Approval 1", type: "approvalTask" }
+      );
+
+      assertProcessSteps(elements, [
+        { elementId: "task1", name: "Task 1", type: "task" },
+        { elementId: "notification1", name: "Notification 1", type: "notification" },
+        { elementId: "approval1", name: "Approval 1", type: "approval" }
       ]);
     });
 
@@ -115,6 +117,111 @@ describe("Process Utils", () => {
         })
       ]);
     });
+
+    it("should handle dependencies between steps correctly", () => {
+      const elements = createTestElements(
+        {
+          id: "task1",
+          name: "Task 1",
+          type: "userTask",
+          outgoing: ["task2"]
+        },
+        {
+          id: "task2",
+          name: "Task 2",
+          type: "serviceTask",
+          outgoing: ["task3"]
+        },
+        {
+          id: "task3",
+          name: "Task 3",
+          type: "approvalTask",
+          outgoing: []
+        }
+      );
+
+      assertProcessSteps(elements, [
+        {
+          elementId: "task1",
+          name: "Task 1",
+          type: "task",
+          dependsOn: ["task2"]
+        },
+        {
+          elementId: "task2",
+          name: "Task 2",
+          type: "notification",
+          dependsOn: ["task3"]
+        },
+        {
+          elementId: "task3",
+          name: "Task 3",
+          type: "approval",
+          dependsOn: []
+        }
+      ]);
+    });
+
+    it("should filter out dependencies to unsupported elements", () => {
+      const elements = createTestElements(
+        {
+          id: "task1",
+          name: "Task 1",
+          type: "userTask",
+          outgoing: ["start1", "task2"]
+        },
+        {
+          id: "task2",
+          name: "Task 2",
+          type: "serviceTask",
+          outgoing: []
+        },
+        {
+          id: "start1",
+          name: "Start Event",
+          type: "startEvent",
+          outgoing: []
+        }
+      );
+
+      assertProcessSteps(elements, [
+        {
+          elementId: "task1",
+          name: "Task 1",
+          type: "task",
+          dependsOn: ["task2"]  // start1 filtrelenmiş olmalı
+        },
+        {
+          elementId: "task2",
+          name: "Task 2",
+          type: "notification",
+          dependsOn: []
+        }
+      ]);
+    });
+
+    it("should handle malformed BPMN elements gracefully", () => {
+      const malformedElements = [
+        { id: "task1", type: "invalidType" } as BPMNElement,
+        { id: "task2", type: "userTask", outgoing: "invalid" } as unknown as BPMNElement,
+        { id: "task3", type: "userTask", outgoing: undefined } as BPMNElement
+      ];
+
+      const result = convertBpmnToProcessSteps(malformedElements);
+      expect(result).toEqual([]);
+    });
+    it("should handle invalid dependency references", () => {
+      const elements = createTestElements(
+        {
+          id: "task1",
+          type: "userTask",
+          outgoing: ["nonexistent1", "nonexistent2"]
+        }
+      );
+
+      const result = convertBpmnToProcessSteps(elements);
+      expect(result[0].dependsOn).toEqual([]);
+    });
   });
 
   describe("mapBpmnTypeToProcessType", () => {
@@ -147,6 +254,10 @@ describe("Process Utils", () => {
       expect(mapBpmnTypeToProcessType("unknownType")).toBe("task");
       expect(mapBpmnTypeToProcessType("customTask")).toBe("task");
       expect(mapBpmnTypeToProcessType("invalidType")).toBe("task");
+    });
+
+    it("should handle null type safely", () => {
+      expect(mapBpmnTypeToProcessType(null as any)).toBe("task");
     });
   });
 

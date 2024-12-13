@@ -2,9 +2,8 @@ import { type Request, type Response, type NextFunction } from 'express';
 import { body, query, param, validationResult, type ValidationError as ExpressValidationError } from 'express-validator';
 import { ValidationError } from '@/shared/errors/common/validation.error';
 import { ProcessStatus } from '../types/process.types';
-import { ErrorCode } from '@/shared/errors/codes/error-codes';
-import { PROCESS_ERROR_MESSAGES } from '../errors/messages';
 import { type UpdateProcessDTO } from '../dtos/process.dto';
+import { ERROR_MESSAGES } from '@/shared/constants/error-messages';
 
 const handleValidationErrors = (req: Request, res: Response, next: NextFunction) => {
     const errors = validationResult(req);
@@ -24,38 +23,38 @@ export const validateCreateProcess = [
     body('name')
         .trim()
         .notEmpty()
-        .withMessage(PROCESS_ERROR_MESSAGES.VALIDATION.NAME_REQUIRED)
+        .withMessage(ERROR_MESSAGES.PROCESS.VALIDATION.NAME_REQUIRED)
         .isLength({ max: 100 })
-        .withMessage(PROCESS_ERROR_MESSAGES.VALIDATION.NAME_TOO_LONG),
+        .withMessage(ERROR_MESSAGES.PROCESS.VALIDATION.NAME_TOO_LONG),
     body('description')
         .optional()
         .trim()
         .isLength({ max: 500 })
-        .withMessage(PROCESS_ERROR_MESSAGES.VALIDATION.DESCRIPTION_TOO_LONG),
+        .withMessage(ERROR_MESSAGES.PROCESS.VALIDATION.DESCRIPTION_TOO_LONG),
     body('bpmnXml')
         .notEmpty()
-        .withMessage(PROCESS_ERROR_MESSAGES.VALIDATION.BPMN_REQUIRED),
+        .withMessage(ERROR_MESSAGES.PROCESS.VALIDATION.BPMN_REQUIRED),
     handleValidationErrors
 ];
 
 export const validateUpdateProcess = [
     param('id')
         .isMongoId()
-        .withMessage(PROCESS_ERROR_MESSAGES.VALIDATION.INVALID_ID),
+        .withMessage(ERROR_MESSAGES.PROCESS.VALIDATION.INVALID_ID),
     body('name')
         .optional()
         .trim()
         .isLength({ max: 100 })
-        .withMessage(PROCESS_ERROR_MESSAGES.VALIDATION.NAME_TOO_LONG),
+        .withMessage(ERROR_MESSAGES.PROCESS.VALIDATION.NAME_TOO_LONG),
     body('description')
         .optional()
         .trim()
         .isLength({ max: 500 })
-        .withMessage(PROCESS_ERROR_MESSAGES.VALIDATION.DESCRIPTION_TOO_LONG),
+        .withMessage(ERROR_MESSAGES.PROCESS.VALIDATION.DESCRIPTION_TOO_LONG),
     body('status')
         .optional()
         .isIn(Object.values(ProcessStatus))
-        .withMessage(PROCESS_ERROR_MESSAGES.INVALID_STATUS),
+        .withMessage(ERROR_MESSAGES.PROCESS.INVALID_STATUS),
     handleValidationErrors
 ];
 
@@ -86,7 +85,7 @@ export class ProcessValidator {
     static validateUpdateData(data: UpdateProcessDTO) {
         if (!data.updatedAt) {
             throw new ValidationError(
-                PROCESS_ERROR_MESSAGES.VALIDATION.UPDATED_AT_REQUIRED,
+                ERROR_MESSAGES.PROCESS.VALIDATION.UPDATED_AT_REQUIRED,
                 { field: 'updatedAt', value: data.updatedAt }
             );
         }
@@ -95,7 +94,7 @@ export class ProcessValidator {
     static validateStatus(status: string) {
         if (!Object.values(ProcessStatus).includes(status as ProcessStatus)) {
             throw new ValidationError(
-                PROCESS_ERROR_MESSAGES.INVALID_STATUS,
+                ERROR_MESSAGES.PROCESS.INVALID_STATUS,
                 { field: 'status', value: status }
             );
         }

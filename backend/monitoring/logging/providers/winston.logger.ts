@@ -49,12 +49,6 @@ const logger = winston.createLogger({
   exitOnError: false,
 });
 
-// Hata mesajları için standart formatlar
-export const ERROR_MESSAGES = {
-  PROCESS_UPDATE_FAILED: "Süreç durumu güncellenemedi",
-  ENGINE_ERROR: "Engine error",
-  VALIDATION_ERROR: "Validation error",
-};
 
 // Hata loglama yardımcı fonksiyonu
 export const logError = (message: string, error: any, meta = {}) => {

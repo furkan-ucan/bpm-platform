@@ -96,7 +96,7 @@ export const createBpmnElement = (overrides = {}): BPMNElement => ({
   ...overrides
 });
 
-interface ProcessStepOverrides {
+export interface ProcessStepOverrides {
   elementId?: string;
   name?: string;
   type?: StepType;
@@ -106,11 +106,11 @@ interface ProcessStepOverrides {
 }
 
 export const createExpectedProcessStep = (overrides: ProcessStepOverrides = {}): ProcessStep => ({
-  elementId: overrides.elementId || "task1",
-  name: overrides.name || "Test Task",
+  elementId: overrides.elementId || "",
+  name: overrides.name || "",
   type: overrides.type || "task",
-  status: overrides.status || "pending",
+  status: "pending",
+  priority: "medium",
   sequence: overrides.sequence || 1,
   dependsOn: overrides.dependsOn || [],
-  ...overrides
 });

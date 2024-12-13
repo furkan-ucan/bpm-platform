@@ -8,6 +8,7 @@ import {
   type CreateProcessDTO,
   type UpdateProcessDTO,
   type ProcessFilterDTO,
+  ProcessResponseDTO,
 } from "@/shared/types/dtos/process.dto";
 import { logger } from "@/shared/utils/logger";
 
@@ -29,8 +30,8 @@ import { AppError } from "@/shared/errors/base/app-error";
 import { BusinessError } from "@/shared/errors/common/business.error";
 import { ERROR_MESSAGES } from "@/shared/constants/error-messages";
 import { TechnicalError } from "@/shared/errors/common/technical.error";
-import { PROCESS_ERROR_MESSAGES } from '../errors/messages';
 import { ProcessOperationError, ProcessNotFoundError } from '../errors/process.errors';
+import { ProcessAlreadyExistsError } from '../errors/process.errors';
 
 export class ProcessService {
   private processMapper: ProcessMapper;
@@ -182,36 +183,32 @@ export class ProcessService {
       throw new TechnicalError(ERROR_MESSAGES.ENGINE.ERROR);
     }
   }
-
   public async updateProcess(
     id: string,
-    data: UpdateProcessDTO,
-    userId: Types.ObjectId,
-  ) {
+    updateData: UpdateProcessDTO,
+    updatedBy: Types.ObjectId
+  ): Promise<IProcess> {
     try {
-      ProcessValidator.validateUpdateData(data);
-
-      const existingProcess = await this.processRepository.findById(id);
-      if (!existingProcess) {
-        throw new NotFoundError(`${id} ${ERROR_MESSAGES.PROCESS.NOT_FOUND}`);
+      const process = await this.processRepository.findById(id);
+      if (!process) {
+        throw new ValidationError(ERROR_MESSAGES.PROCESS.NOT_FOUND);
       }
 
-      if (data.name && data.name !== existingProcess.name) {
-        const processWithSameName = await this.processRepository.findByName(
-          data.name,
-        );
-        if (processWithSameName && processWithSameName._id.toString() !== id) {
+      if (updateData.name && updateData.name !== process.name) {
+        const existingProcess = await this.processRepository.findByName(updateData.name);
+        if (existingProcess && existingProcess._id.toString() !== id) {
           throw new ValidationError(ERROR_MESSAGES.PROCESS.NAME_EXISTS);
         }
       }
 
-      const processData = {
-        ...data,
-        updatedAt: new Date()
-      };
+      // updatedAt alanını güncelleme verisine ekleyelim
+      const updatedProcess = await this.processRepository.update(
+        id,
+        { ...updateData, updatedAt: new Date() }, // updatedAt burada zorunlu hale getirildi
+        updatedBy
+      );
 
-      const process = await this.processRepository.update(id, processData, userId);
-      return ProcessMapper.toDTO(process);
+      return updatedProcess;
     } catch (error) {
       logger.error("Process update error:", {
         domain: "Process",
@@ -225,33 +222,42 @@ export class ProcessService {
         throw error;
       }
 
-      throw new TechnicalError(ERROR_MESSAGES.ENGINE.ERROR);
+      throw new ProcessOperationError(ERROR_MESSAGES.PROCESS.UPDATE_FAILED);
     }
   }
-
   public async deleteProcess(id: string) {
     try {
       const process = await this.processRepository.findById(id);
       if (!process) {
-        throw new NotFoundError(`${id} ${ERROR_MESSAGES.PROCESS.NOT_FOUND}`);
+        throw new ProcessNotFoundError(id);
       }
 
+      const instanceId = `PROC_${process._id.toString()}`;
       try {
-        const instanceId = `PROC_${process._id.toString()}`;
         await this.bpmnEngine.stopInstance(instanceId);
-      } catch (error) {
-        logger.warn("Engine stop error:", {
+      } catch (engineError) {
+        logger.error("Process delete error:", {
           domain: "Process",
-          action: "stop",
+          action: "delete",
           resourceId: id,
-          error,
+          error: engineError,
           timestamp: new Date()
         });
+        throw new ProcessOperationError(
+          ERROR_MESSAGES.ENGINE.ERROR,
+          'TECHNICAL_ERROR'
+        );
       }
 
       await this.processRepository.delete(id);
-      return { message: PROCESS_ERROR_MESSAGES.DELETE_SUCCESS };
+      return {
+        message: ERROR_MESSAGES.PROCESS.DELETE_SUCCESS
+      };
     } catch (error) {
+      if (error instanceof ProcessOperationError || error instanceof ProcessNotFoundError) {
+        throw error;
+      }
+
       logger.error("Process delete error:", {
         domain: "Process",
         action: "delete",
@@ -260,11 +266,7 @@ export class ProcessService {
         timestamp: new Date()
       });
 
-      if (error instanceof ValidationError || error instanceof NotFoundError) {
-        throw error;
-      }
-
-      throw new TechnicalError(ERROR_MESSAGES.ENGINE.ERROR);
+      throw new ProcessOperationError(ERROR_MESSAGES.PROCESS.DELETE_FAILED);
     }
   }
 

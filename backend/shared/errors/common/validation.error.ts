@@ -1,13 +1,13 @@
 import { AppError } from '../base/app-error';
-import { ErrorCode } from '../codes/error-codes';
+import { ErrorCode, HttpStatusCode } from '../codes/error-codes';
 
 export class ValidationError extends AppError {
     constructor(message: string, details?: any) {
         super(
+            HttpStatusCode.BAD_REQUEST,
+            'VALIDATION_ERROR',
             message,
-            ErrorCode.BAD_REQUEST,
-            ErrorCode.VALIDATION_ERROR,
             details
         );
     }
-} 
+}

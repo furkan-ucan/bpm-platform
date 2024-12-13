@@ -1,11 +1,15 @@
-import { ErrorCode } from '../codes/error-codes';
+import { ErrorCode, HttpStatusCode } from '../codes/error-codes';
+
+export interface ErrorDetails {
+    [key: string]: any;
+}
 
 export abstract class AppError extends Error {
     constructor(
-        public readonly message: string,
-        public readonly statusCode: number = 500,
-        public readonly code: ErrorCode,
-        public readonly details?: any
+        public readonly statusCode: HttpStatusCode,
+        public readonly code: keyof typeof ErrorCode,
+        message: string,
+        public readonly details?: ErrorDetails
     ) {
         super(message);
         this.name = this.constructor.name;
@@ -21,4 +25,37 @@ export abstract class AppError extends Error {
             details: this.details
         };
     }
-} 
+}
+
+export class ValidationError extends AppError {
+    constructor(message: string, details?: ErrorDetails) {
+        super(
+            HttpStatusCode.BAD_REQUEST,
+            'VALIDATION_ERROR',
+            message,
+            details
+        );
+    }
+}
+
+export class NotFoundError extends AppError {
+    constructor(message: string, details?: ErrorDetails) {
+        super(
+            HttpStatusCode.NOT_FOUND,
+            'PROCESS_NOT_FOUND',
+            message,
+            details
+        );
+    }
+}
+
+export class TechnicalError extends AppError {
+    constructor(message: string, details?: ErrorDetails) {
+        super(
+            HttpStatusCode.INTERNAL_SERVER,
+            'TECHNICAL_ERROR',
+            message,
+            details
+        );
+    }
+}

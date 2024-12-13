@@ -1,7 +1,10 @@
 import { type Request, type Response, type NextFunction } from 'express';
 import { env } from '@/config';
 import { logger } from '@/shared/utils/logger';
-import { AppError, ValidationError, NotFoundError, TechnicalError } from '../types/app-error';
+import { AppError } from '../base/app-error';
+import { ValidationError } from '../common/validation.error';
+import { NotFoundError } from '../common/not-found.error';
+import { TechnicalError } from '../common/technical.error';
 
 // Domain seviyesinde hata yakalama
 export class DomainErrorHandler {
