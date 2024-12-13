@@ -1,12 +1,12 @@
-import { type Request } from 'express';
-import { type Document, type Types } from 'mongoose';
-
-import { type IUser } from '@/features/auth/models/user.model';
-
-type AuthUser = Document<unknown, any, IUser> & 
-    Omit<IUser, 'id'> & 
-    { _id: Types.ObjectId; id: string };
+import { Request, Response, NextFunction } from 'express';
+import { IUser } from '@/features/auth/models/user.model';
 
 export interface AuthenticatedRequest extends Request {
-    user?: AuthUser;
+    user?: IUser & { id: string };
 }
+
+export type AuthRequestHandler = (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+) => Promise<void>;

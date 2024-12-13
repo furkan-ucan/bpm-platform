@@ -2,16 +2,17 @@ import { type Request, type Response, type NextFunction } from 'express';
 import { type Document, type Types } from 'mongoose';
 
 import { verifyToken } from '@/security/authentication/providers/jwt.provider';
-import { AuthenticationError, AuthorizationError } from '@/shared/errors/types/app-error';
+import { AuthenticationError } from '@/shared/errors/common/authentication.error';
+import { AuthorizationError } from '@/shared/errors/common/authorization.error';
 
 import { User, type IUser } from '../models/user.model';
 
 export interface AuthenticatedRequest extends Request {
-    user: Document<unknown, unknown, IUser> & 
-          IUser & {
-            _id: Types.ObjectId;
-            id: string;
-          };
+    user: Document<unknown, unknown, IUser> &
+    IUser & {
+        _id: Types.ObjectId;
+        id: string;
+    };
 }
 
 export const authenticate = async (

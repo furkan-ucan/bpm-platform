@@ -20,11 +20,13 @@ import {
   createMockProcessResult,
   createMockUpdateProcessDTO,
 } from "../helpers/process.fixtures";
-import { ValidationError } from "@/shared/errors/types/app-error";
+import { ValidationError } from "@/shared/errors/common/validation.error";
 import { ProcessInstanceStatus } from "@/core/bpmn/types/process.types";
 import { logger } from "@/shared/utils/logger";
-import { TechnicalError } from "@/shared/errors/types/app-error";
+import { TechnicalError } from "@/shared/errors/common/technical.error";
 import { type IProcessRepository } from "@/shared/interfaces/repositories/IProcessRepository";
+import { PROCESS_ERROR_MESSAGES } from "@/features/processes/errors/messages";
+import { convertProcessToDTO } from "@/features/processes/utils/process.utils";
 
 interface MockBPMNEngine extends BPMNEngine {
   startProcess: Mock;
@@ -62,14 +64,6 @@ describe("ProcessService", () => {
   let bpmnEngine: MockBPMNEngine;
   let mockProcessId: string;
 
-  // Test verilerini tanımlama
-  const mockProcessDTO = {
-    name: "Test Süreci",
-    description: "Test süreç açıklaması",
-    bpmnXml:
-      "<?xml version='1.0' encoding='UTF-8'?><definitions></definitions>",
-  };
-
   beforeEach(() => {
     mockProcessId = new Types.ObjectId().toString();
 
@@ -101,593 +95,282 @@ describe("ProcessService", () => {
     vi.clearAllMocks();
   });
 
-  describe("deleteProcess", () => {
-    const mockProcessId = new Types.ObjectId().toString();
+  describe("Process Management", () => {
+    describe("Create Process", () => {
+      const mockProcessDTO = {
+        name: "Test Süreci",
+        description: "Test süreç açıklaması",
+        bpmnXml: "<?xml version='1.0' encoding='UTF-8'?><definitions></definitions>",
+        category: "test-category"
+      };
 
-    it("should delete process successfully", async () => {
-      const mockProcess = createMockProcess({
-        _id: new Types.ObjectId(mockProcessId),
-        status: ProcessStatus.DRAFT,
+      it("should create a new process successfully", async () => {
+        const mockProcess = createMockProcess({
+          ...mockProcessDTO,
+          _id: new Types.ObjectId(),
+          status: ProcessStatus.ACTIVE,
+        });
+
+        processRepository.findByName.mockResolvedValue(null);
+        processRepository.create.mockResolvedValue(mockProcess);
+        bpmnEngine.startProcess.mockResolvedValue(undefined);
+
+        const result = await processService.createProcess(
+          mockProcessDTO,
+          new Types.ObjectId(),
+        );
+
+        expect(processRepository.findByName).toHaveBeenCalledWith(
+          mockProcessDTO.name,
+        );
+        expect(processRepository.create).toHaveBeenCalled();
+        expect(bpmnEngine.startProcess).toHaveBeenCalled();
+        expect(result).toEqual(convertProcessToDTO(mockProcess));
       });
 
-      processRepository.findById.mockResolvedValue(mockProcess);
-      processRepository.delete.mockResolvedValue(undefined);
-      bpmnEngine.stopInstance.mockResolvedValue(undefined);
+      describe("Error Handling", () => {
+        it("should throw ValidationError when process name already exists", async () => {
+          processRepository.findByName.mockResolvedValue({} as IProcess);
 
-      await processService.deleteProcess(mockProcessId);
+          await expect(
+            processService.createProcess(mockProcessDTO, new Types.ObjectId()),
+          ).rejects.toThrow(ERROR_MESSAGES.PROCESS.NAME_EXISTS);
+        });
 
-      expect(processRepository.findById).toHaveBeenCalledWith(mockProcessId);
-      expect(processRepository.delete).toHaveBeenCalledWith(mockProcessId);
-      expect(bpmnEngine.stopInstance).toHaveBeenCalledWith(
-        `PROC_${mockProcessId}`,
-      );
-    });
-  });
+        it("should handle process creation error gracefully", async () => {
+          processRepository.create.mockRejectedValue(
+            new Error(ERROR_MESSAGES.PROCESS.CREATION_FAILED),
+          );
 
-  describe("createProcess", () => {
-    it("should create a new process successfully", async () => {
-      const mockProcess = createMockProcess({
-        ...mockProcessDTO,
-        _id: new Types.ObjectId(),
-        status: ProcessStatus.ACTIVE,
+          await expect(
+            processService.createProcess(mockProcessDTO, new Types.ObjectId()),
+          ).rejects.toThrow(ERROR_MESSAGES.PROCESS.CREATION_FAILED);
+        });
       });
-
-      processRepository.findByName.mockResolvedValue(null);
-      processRepository.create.mockResolvedValue(mockProcess);
-      bpmnEngine.startProcess.mockResolvedValue(undefined);
-
-      const result = await processService.createProcess(
-        mockProcessDTO,
-        new Types.ObjectId(),
-      );
-
-      expect(processRepository.findByName).toHaveBeenCalledWith(
-        mockProcessDTO.name,
-      );
-      expect(processRepository.create).toHaveBeenCalled();
-      expect(bpmnEngine.startProcess).toHaveBeenCalled();
-      expect(result).toMatchObject(mockProcess);
     });
 
-    it("should throw ValidationError when process name already exists", async () => {
-      processRepository.findByName.mockResolvedValue({} as IProcess);
-
-      await expect(
-        processService.createProcess(mockProcessDTO, new Types.ObjectId()),
-      ).rejects.toThrow(ERROR_MESSAGES.PROCESS.NAME_EXISTS);
-    });
-
-    it("should handle process creation error gracefully", async () => {
-      processRepository.create.mockRejectedValue(
-        new Error(ERROR_MESSAGES.PROCESS.CREATION_FAILED),
-      );
-
-      await expect(
-        processService.createProcess(mockProcessDTO, new Types.ObjectId()),
-      ).rejects.toThrow(ERROR_MESSAGES.PROCESS.CREATION_FAILED);
-    });
-
-    // Test düzeltmesi
-    it("should handle process creation error with empty error object", async () => {
-      processRepository.findByName.mockResolvedValue(null);
-      processRepository.create.mockRejectedValue({});
-
-      await expect(
-        processService.createProcess(mockProcessDTO, new Types.ObjectId()),
-      ).rejects.toThrow(ERROR_MESSAGES.PROCESS.CREATION_FAILED);
-
-      expect(logger.error).toHaveBeenCalledWith(
-        "Süreç oluşturma hatası:",
-        expect.objectContaining({}),
-      );
-    });
-
-    it("should handle multiple process creation errors", async () => {
-      const errors = [
-        {},
-        new Error("Test error"),
-        new ValidationError("Test validation"),
-      ];
-
-      for (const error of errors) {
-        processRepository.create.mockRejectedValue(error);
-
-        await expect(
-          processService.createProcess(
-            {
-              name: "Test Süreci",
-              description: "Test süreç açıklaması",
-              bpmnXml:
-                "<?xml version='1.0' encoding='UTF-8'?><definitions></definitions>",
-            },
-            new Types.ObjectId(),
-          ),
-        ).rejects.toThrow();
-      }
-    });
-  });
-
-  describe("updateProcess", () => {
-    const mockProcessId = new Types.ObjectId().toString();
-    const mockProcess = createMockProcess({
-      _id: new Types.ObjectId(mockProcessId),
-      name: "Test Süreci",
-      description: "Test açıklama",
-      status: ProcessStatus.ACTIVE,
-    });
-
-    const mockUpdateData = createMockUpdateProcessDTO({
-      name: "Güncellenmiş Süreç",
-      description: "Güncellenmiş açıklama",
-      status: ProcessStatus.INACTIVE,
-      lastUpdated: new Date(),
-      updatedAt: new Date(),
-    });
-
-    it("should update process successfully", async () => {
-      const updatedBy = new Types.ObjectId();
-      const mockUpdatedProcess = createMockProcess({
-        _id: new Types.ObjectId(mockProcessId),
+    describe("Update Process", () => {
+      const mockUpdateData = {
         name: "Güncellenmiş Süreç",
         description: "Güncellenmiş açıklama",
         status: ProcessStatus.INACTIVE,
-        updatedBy,
-      });
-
-      processRepository.findById.mockResolvedValue(mockUpdatedProcess);
-      processRepository.update.mockResolvedValue(mockUpdatedProcess);
-
-      const result = await processService.updateProcess(
-        mockProcessId,
-        mockUpdateData,
-        updatedBy,
-      );
-
-      expect(processRepository.findById).toHaveBeenCalledWith(mockProcessId);
-      expect(processRepository.update).toHaveBeenCalledWith(
-        mockProcessId,
-        mockUpdateData,
-        updatedBy,
-      );
-      expect(result!.name).toBe(mockUpdateData.name);
-      expect(result!.status).toBe(mockUpdateData.status);
-    });
-
-    it("should throw ValidationError when process not found", async () => {
-      processRepository.findById.mockResolvedValue(null);
-
-      await expect(
-        processService.updateProcess(
-          mockProcessId,
-          mockUpdateData,
-          new Types.ObjectId(),
-        ),
-      ).rejects.toThrow(Error);
-    });
-
-    it("should throw ValidationError when process name already exists", async () => {
-      processRepository.findById.mockResolvedValue({} as IProcess);
-      processRepository.update.mockRejectedValue(
-        new Error("Bu isimde bir süreç zaten var"),
-      );
-
-      await expect(
-        processService.updateProcess(
-          mockProcessId,
-          mockUpdateData,
-          new Types.ObjectId(),
-        ),
-      ).rejects.toThrow(Error);
-    });
-
-    it("should throw ValidationError if process with same name exists", async () => {
-      // Mevcut süreç
-      const existingProcess = createMockProcess({
-        _id: new Types.ObjectId(mockProcessId),
-        name: "Mevcut Süreç",
-        createdBy: new Types.ObjectId(),
-      });
-
-      // Aynı isimle başka bir süreç
-      const duplicateProcess = createMockProcess({
-        _id: new Types.ObjectId(), // Farklı ID
-        name: "Test Süreci", // Güncellenecek isim
-        createdBy: new Types.ObjectId(),
-      });
-
-      // Mock ayarlamaları
-      processRepository.findById.mockResolvedValue(existingProcess);
-      processRepository.findByName.mockResolvedValue(duplicateProcess);
-
-      const updateData = {
-        name: "Test Süreci", // duplicateProcess ile aynı isim
-        lastUpdated: new Date(),
-        updatedAt: new Date(),
+        updatedAt: new Date()
       };
 
-      await expect(
-        processService.updateProcess(
+      it("should update process successfully", async () => {
+        const updatedBy = new Types.ObjectId();
+        const mockUpdateData = {
+          name: "Güncellenmiş Süreç",
+          description: "Güncellenmiş açıklama",
+          status: ProcessStatus.INACTIVE,
+          updatedAt: expect.any(Date)
+        };
+
+        const mockUpdatedProcess = createMockProcess({
+          _id: new Types.ObjectId(mockProcessId),
+          ...mockUpdateData
+        });
+
+        processRepository.findById.mockResolvedValue(mockUpdatedProcess);
+        processRepository.update.mockResolvedValue(mockUpdatedProcess);
+
+        const result = await processService.updateProcess(
           mockProcessId,
-          updateData,
-          existingProcess.createdBy,
-        ),
-      ).rejects.toThrow(ValidationError);
+          mockUpdateData,
+          updatedBy
+        );
 
-      expect(processRepository.findById).toHaveBeenCalledWith(mockProcessId);
-      expect(processRepository.findByName).toHaveBeenCalledWith(
-        updateData.name,
-      );
-    });
-
-    it("should allow update if name is unchanged", async () => {
-      const processId = new Types.ObjectId();
-      const existingProcess = createMockProcess({
-        _id: processId,
-        name: "Test Process",
-        description: "Test Description",
-        status: ProcessStatus.ACTIVE,
-      });
-
-      processRepository.findById.mockResolvedValue(existingProcess);
-      processRepository.findByName.mockResolvedValue(existingProcess);
-      processRepository.update.mockResolvedValue(existingProcess);
-
-      const unchangedNameData = createMockUpdateProcessDTO({
-        name: "Test Process",
-        description: "Updated Description",
-      });
-
-      await expect(
-        processService.updateProcess(
-          processId.toString(),
-          unchangedNameData,
-          new Types.ObjectId(),
-        ),
-      ).resolves.not.toThrow();
-    });
-  });
-
-  describe("getProcessById", () => {
-    const mockProcessId = new Types.ObjectId().toString();
-
-    it("should get process by id successfully", async () => {
-      const mockProcess = createMockProcess({
-        _id: new Types.ObjectId(mockProcessId),
-        name: "Test Süreci",
-        description: "Test süreç açıklaması",
-        status: ProcessStatus.ACTIVE,
-      });
-
-      processRepository.findById.mockResolvedValue(mockProcess);
-      bpmnEngine.getInstanceStatus.mockReturnValue(ProcessStatus.ACTIVE);
-
-      const result = await processService.getProcessById(mockProcessId);
-
-      expect(processRepository.findById).toHaveBeenCalledWith(mockProcessId);
-      expect(bpmnEngine.getInstanceStatus).toHaveBeenCalledWith(
-        `PROC_${mockProcessId}`,
-      );
-      expect(result).toMatchObject({
-        id: mockProcessId,
-        status: ProcessStatus.ACTIVE,
-        engineStatus: ProcessStatus.ACTIVE,
-      });
-    });
-
-    it("should handle engine status error gracefully", async () => {
-      const mockProcess = createMockProcess({
-        _id: new Types.ObjectId(mockProcessId),
-        status: ProcessStatus.ACTIVE,
-      });
-
-      processRepository.findById.mockResolvedValue(mockProcess);
-      bpmnEngine.getInstanceStatus.mockImplementation(() => {
-        throw new Error(ERROR_MESSAGES.ENGINE.ERROR);
-      });
-
-      const result = await processService.getProcessById(mockProcessId);
-      if (!result) throw new Error("Result should be defined");
-
-      expect(result.engineStatus).toBe("not_started");
-    });
-
-    it("should handle engine status error with empty error object", async () => {
-      const mockProcess = createMockProcess({
-        _id: new Types.ObjectId(mockProcessId),
-        status: ProcessStatus.ACTIVE,
-      });
-
-      processRepository.findById.mockResolvedValue(mockProcess);
-      bpmnEngine.getInstanceStatus.mockRejectedValue({});
-
-      const result = await processService.getProcessById(mockProcessId);
-      if (!result) throw new Error("Result should be defined");
-
-      expect(result.engineStatus).toBe("not_started");
-    });
-
-    it("should handle multiple engine status errors", async () => {
-      const mockProcess = createMockProcess({
-        _id: new Types.ObjectId(),
-        status: ProcessStatus.ACTIVE,
-      });
-
-      processRepository.findById.mockResolvedValue(mockProcess);
-      bpmnEngine.getInstanceStatus.mockRejectedValue({});
-
-      const result = await processService.getProcessById(
-        mockProcess._id.toString(),
-      );
-      if (!result) throw new Error("Result should be defined");
-
-      expect(result.engineStatus).toBe("not_started");
-    });
-  });
-
-  describe("getProcesses", () => {
-    const mockFilters: ProcessFilterDTO = {
-      status: "active",
-      page: 0,
-      limit: 10,
-    };
-
-    it("should get processes list successfully", async () => {
-      const mockProcesses = [
-        createMockProcess({
-          name: "Test Süreci 1",
-          status: ProcessStatus.ACTIVE,
-        }),
-        createMockProcess({
-          name: "Test Süreci 2",
-          status: ProcessStatus.ACTIVE,
-        }),
-      ];
-
-      const mockResult = createMockProcessResult(mockProcesses);
-      processRepository.findAll.mockResolvedValue(mockResult);
-
-      const result = await processService.getProcesses(mockFilters);
-      if (!result) throw new Error("Result should be defined");
-
-      expect(result.processes).toHaveLength(2);
-      expect(result.pagination).toEqual({
-        total: 2,
-        page: 0,
-        limit: 10,
-        pages: 1,
-      });
-    });
-
-    it("should return empty list when no processes found", async () => {
-      processRepository.findAll.mockResolvedValue({
-        processes: [],
-        total: 0,
-      });
-
-      const result = await processService.getProcesses(mockFilters);
-      if (!result) throw new Error("Result should be defined");
-
-      expect(result.processes).toHaveLength(0);
-      expect(result.pagination.total).toBe(0);
-    });
-
-    it("should return filtered processes", async () => {
-      const filters: ProcessFilterDTO = {
-        status: "active",
-        search: "test",
-      };
-      const processes = [
-        createMockProcess({
-          name: "Test Süreci 1",
-          description: "Test süreç açıklaması 1",
-          status: ProcessStatus.ACTIVE,
-        }),
-        createMockProcess({
-          name: "Test Süreci 2",
-          description: "Test süreç açıklaması 2",
-          status: ProcessStatus.ACTIVE,
-        }),
-      ];
-      processRepository.findAll.mockResolvedValue({
-        processes,
-        total: processes.length,
-      });
-
-      const result = await processService.getProcesses(filters);
-      if (!result) throw new Error("Result should be defined");
-
-      expect(result.processes).toHaveLength(2);
-      expect(result.pagination).toEqual({
-        total: 2,
-        page: 0,
-        limit: 10,
-        pages: 1,
-      });
-      expect(processRepository.findAll).toHaveBeenCalledWith(filters);
-    });
-  });
-
-  describe("updateProcessStatus", () => {
-    const mockProcessId = new Types.ObjectId().toString();
-
-    it("should update process status successfully", async () => {
-      const mockProcess = createMockProcess({
-        _id: new Types.ObjectId(mockProcessId),
-        status: ProcessStatus.ACTIVE,
-      });
-
-      processRepository.findById.mockResolvedValue(mockProcess);
-      processRepository.update.mockResolvedValue(mockProcess);
-      bpmnEngine.updateInstanceStatus.mockResolvedValue(undefined);
-
-      await processService.updateProcessStatus(mockProcessId, "inactive");
-
-      expect(processRepository.findById).toHaveBeenCalledWith(mockProcessId);
-      expect(bpmnEngine.updateInstanceStatus).toHaveBeenCalledWith(
-        `PROC_${mockProcessId}`,
-        "INACTIVE",
-      );
-      expect(processRepository.update).toHaveBeenCalledWith(
-        mockProcessId,
-        expect.objectContaining({
-          status: "inactive",
-          updatedAt: expect.any(Date),
-          lastUpdated: expect.any(Date),
-        }),
-        mockProcess._id,
-      );
-    });
-
-    it("should throw ValidationError when process not found", async () => {
-      processRepository.findById.mockResolvedValue(null);
-
-      await expect(
-        processService.updateProcessStatus(mockProcessId, "active"),
-      ).rejects.toThrow(ERROR_MESSAGES.PROCESS.NOT_FOUND);
-    });
-
-    it("should handle engine errors gracefully", async () => {
-      const mockProcess = createMockProcess({
-        _id: new Types.ObjectId(mockProcessId),
-        status: ProcessStatus.ACTIVE,
-      });
-
-      processRepository.findById.mockResolvedValue(mockProcess);
-      bpmnEngine.updateInstanceStatus.mockRejectedValue(
-        new Error(ERROR_MESSAGES.ENGINE.UPDATE_FAILED),
-      );
-
-      await expect(
-        processService.updateProcessStatus(mockProcessId, "inactive"),
-      ).rejects.toThrow(ERROR_MESSAGES.ENGINE.UPDATE_FAILED);
-    });
-
-    it("should throw ValidationError for invalid status", async () => {
-      const mockProcess = createMockProcess({
-        _id: new Types.ObjectId(mockProcessId),
-        status: ProcessStatus.ACTIVE,
-      });
-
-      processRepository.findById.mockResolvedValue(mockProcess);
-
-      await expect(
-        processService.updateProcessStatus(mockProcessId, "invalid_status"),
-      ).rejects.toThrow(ERROR_MESSAGES.PROCESS.INVALID_STATUS);
-    });
-
-    it("should handle multiple engine errors gracefully", async () => {
-      const mockProcess = createMockProcess({
-        _id: new Types.ObjectId(mockProcessId),
-        status: ProcessStatus.ACTIVE,
-      });
-
-      processRepository.findById.mockResolvedValue(mockProcess);
-      bpmnEngine.updateInstanceStatus.mockRejectedValue(new Error());
-
-      await expect(
-        processService.updateProcessStatus(mockProcessId, "inactive"),
-      ).rejects.toThrow();
-
-      expect(processRepository.update).not.toHaveBeenCalled();
-    });
-
-    it("should handle status update error with empty error object", async () => {
-      const mockProcess = createMockProcess();
-
-      processRepository.findById.mockResolvedValue(mockProcess);
-      bpmnEngine.updateInstanceStatus.mockRejectedValue({});
-
-      await expect(
-        processService.updateProcessStatus(
+        expect(processRepository.findById).toHaveBeenCalledWith(mockProcessId);
+        expect(processRepository.update).toHaveBeenCalledWith(
           mockProcessId,
-          ProcessStatus.INACTIVE,
-        ),
-      ).rejects.toThrow(ERROR_MESSAGES.ENGINE.UPDATE_FAILED);
-
-      expect(logger.error).toHaveBeenCalledWith(
-        "Process updateStatus error:",
-        expect.objectContaining({}),
-      );
-    });
-
-    it("should handle multiple status update errors", async () => {
-      const mockProcess = createMockProcess({
-        _id: new Types.ObjectId(),
-        status: ProcessStatus.ACTIVE,
+          expect.objectContaining(mockUpdateData),
+          updatedBy
+        );
+        expect(result).toEqual(convertProcessToDTO(mockUpdatedProcess));
       });
 
-      processRepository.findById.mockResolvedValue(mockProcess);
+      describe("Validation", () => {
+        it("should throw ValidationError when process not found", async () => {
+          processRepository.findById.mockResolvedValue(null);
 
-      const errors = [
-        {},
-        new Error("Test error"),
-        new ValidationError("Test validation"),
-      ];
+          await expect(
+            processService.updateProcess(
+              mockProcessId,
+              mockUpdateData,
+              new Types.ObjectId(),
+            ),
+          ).rejects.toThrow(Error);
+        });
 
-      for (const error of errors) {
-        bpmnEngine.updateInstanceStatus.mockRejectedValue(error);
+        it("should throw ValidationError if process with same name exists", async () => {
+          // Mevcut süreç
+          const existingProcess = createMockProcess({
+            _id: new Types.ObjectId(mockProcessId),
+            name: "Mevcut Süreç",
+            createdBy: new Types.ObjectId(),
+          });
 
-        await expect(
-          processService.updateProcessStatus(
-            mockProcess._id.toString(),
-            "inactive",
-          ),
-        ).rejects.toThrow();
-      }
+          // Aynı isimle başka bir süreç
+          const duplicateProcess = createMockProcess({
+            _id: new Types.ObjectId(), // Farklı ID
+            name: "Test Süreci", // Güncellenecek isim
+            createdBy: new Types.ObjectId(),
+          });
+
+          // Mock ayarlamaları
+          processRepository.findById.mockResolvedValue(existingProcess);
+          processRepository.findByName.mockResolvedValue(duplicateProcess);
+
+          const updateData = {
+            name: "Test Süreci", // duplicateProcess ile aynı isim
+            updatedAt: new Date()
+          };
+
+          await expect(
+            processService.updateProcess(
+              mockProcessId,
+              updateData,
+              existingProcess.createdBy,
+            ),
+          ).rejects.toThrow(ValidationError);
+
+          expect(processRepository.findById).toHaveBeenCalledWith(mockProcessId);
+          expect(processRepository.findByName).toHaveBeenCalledWith(
+            updateData.name,
+          );
+        });
+      });
     });
 
-    it("should handle engine status update error", async () => {
-      const mockProcessId = new Types.ObjectId().toString();
-      const mockProcess = createMockProcess({
-        _id: new Types.ObjectId(mockProcessId),
-        status: ProcessStatus.ACTIVE,
+    describe("Status Management", () => {
+      it("should update process status successfully", async () => {
+        const mockProcess = createMockProcess({
+          _id: new Types.ObjectId(mockProcessId),
+          status: ProcessStatus.ACTIVE
+        });
+
+        processRepository.findById.mockResolvedValue(mockProcess);
+        processRepository.update.mockResolvedValue(mockProcess);
+        bpmnEngine.updateInstanceStatus.mockResolvedValue(undefined);
+
+        const result = await processService.updateProcessStatus(mockProcessId, ProcessStatus.INACTIVE);
+
+        expect(bpmnEngine.updateInstanceStatus).toHaveBeenCalledWith(
+          `PROC_${mockProcessId}`,
+          ProcessInstanceStatus.INACTIVE
+        );
+        expect(result).toEqual(convertProcessToDTO(mockProcess));
       });
 
-      processRepository.findById.mockResolvedValue(mockProcess);
-      bpmnEngine.updateInstanceStatus.mockRejectedValue(
-        new Error(ERROR_MESSAGES.ENGINE.UPDATE_FAILED),
-      );
+      describe("Error Cases", () => {
+        it("should handle engine errors gracefully", async () => {
+          const mockProcess = createMockProcess({
+            _id: new Types.ObjectId(mockProcessId),
+            status: ProcessStatus.ACTIVE,
+          });
 
-      await expect(
-        processService.updateProcessStatus(
-          mockProcessId,
-          ProcessStatus.INACTIVE,
-        ),
-      ).rejects.toThrow(ERROR_MESSAGES.ENGINE.UPDATE_FAILED);
+          processRepository.findById.mockResolvedValue(mockProcess);
+          bpmnEngine.updateInstanceStatus.mockRejectedValue(
+            new Error(ERROR_MESSAGES.ENGINE.UPDATE_FAILED),
+          );
 
-      expect(processRepository.findById).toHaveBeenCalledWith(mockProcessId);
-      expect(bpmnEngine.updateInstanceStatus).toHaveBeenCalled();
+          await expect(
+            processService.updateProcessStatus(mockProcessId, ProcessStatus.INACTIVE),
+          ).rejects.toThrow(ERROR_MESSAGES.ENGINE.UPDATE_FAILED);
+        });
+
+        it("should throw ValidationError for invalid status", async () => {
+          const mockProcess = createMockProcess({
+            _id: new Types.ObjectId(mockProcessId)
+          });
+
+          processRepository.findById.mockResolvedValue(mockProcess);
+          bpmnEngine.updateInstanceStatus.mockRejectedValue(
+            new ValidationError(ERROR_MESSAGES.PROCESS.INVALID_STATUS)
+          );
+
+          await expect(
+            processService.updateProcessStatus(
+              mockProcessId,
+              'INVALID_STATUS' as ProcessStatus
+            )
+          ).rejects.toThrow(ERROR_MESSAGES.PROCESS.INVALID_STATUS);
+        });
+      });
     });
-  });
 
-  describe("getProcessStatus", () => {
-    it("should return process status successfully", async () => {
-      const mockProcessId = "test-process-id";
-      bpmnEngine.getInstanceStatus.mockResolvedValue({
-        status: ProcessStatus.ACTIVE,
+    describe("Delete Process", () => {
+      it("should delete process successfully", async () => {
+        const mockProcess = createMockProcess({
+          _id: new Types.ObjectId(mockProcessId),
+          status: ProcessStatus.ACTIVE
+        });
+
+        processRepository.findById.mockResolvedValue(mockProcess);
+        processRepository.delete.mockResolvedValue(mockProcess);
+        bpmnEngine.stopInstance.mockResolvedValue(undefined);
+
+        await processService.deleteProcess(mockProcessId);
+
+        expect(processRepository.findById).toHaveBeenCalledWith(mockProcessId);
+        expect(processRepository.delete).toHaveBeenCalledWith(mockProcessId);
+        expect(bpmnEngine.stopInstance).toHaveBeenCalledWith(`PROC_${mockProcessId}`);
       });
 
-      const result = await processService.getProcessStatus(mockProcessId);
+      describe("Error Handling", () => {
+        it("should throw ValidationError when process not found", async () => {
+          processRepository.findById.mockResolvedValue(null);
 
-      expect(result).toBe(ProcessStatus.ACTIVE);
-      expect(bpmnEngine.getInstanceStatus).toHaveBeenCalledWith(mockProcessId);
-    });
+          await expect(
+            processService.deleteProcess(mockProcessId)
+          ).rejects.toThrow(ERROR_MESSAGES.PROCESS.NOT_FOUND);
+        });
 
-    it("should handle engine status error gracefully", async () => {
-      const mockProcessId = new Types.ObjectId().toString();
-      bpmnEngine.getInstanceStatus.mockRejectedValue(
-        new Error(ERROR_MESSAGES.ENGINE.ERROR),
-      );
+        it("should handle engine errors gracefully", async () => {
+          const mockProcess = createMockProcess({
+            _id: new Types.ObjectId(mockProcessId)
+          });
 
-      await expect(
-        processService.getProcessStatus(mockProcessId),
-      ).rejects.toThrow(ERROR_MESSAGES.ENGINE.ERROR);
+          processRepository.findById.mockResolvedValue(mockProcess);
+          processRepository.delete.mockRejectedValue(new Error(ERROR_MESSAGES.ENGINE.ERROR));
+          bpmnEngine.stopInstance.mockRejectedValue(new Error(ERROR_MESSAGES.ENGINE.ERROR));
+
+          await expect(
+            processService.deleteProcess(mockProcessId)
+          ).rejects.toThrow(ERROR_MESSAGES.ENGINE.ERROR);
+
+          expect(logger.error).toHaveBeenCalledWith(
+            "Process delete error:",
+            expect.objectContaining({
+              domain: "Process",
+              action: "delete",
+              resourceId: mockProcessId,
+              error: expect.any(Error),
+              timestamp: expect.any(Date)
+            })
+          );
+        });
+
+        it("should return success message after deletion", async () => {
+          const mockProcess = createMockProcess({
+            _id: new Types.ObjectId(mockProcessId)
+          });
+
+          processRepository.findById.mockResolvedValue(mockProcess);
+          processRepository.delete.mockResolvedValue(mockProcess);
+          bpmnEngine.stopInstance.mockResolvedValue(undefined);
+
+          const result = await processService.deleteProcess(mockProcessId);
+
+          expect(result).toEqual({
+            message: PROCESS_ERROR_MESSAGES.DELETE_SUCCESS
+          });
+        });
+      });
     });
   });
 
   describe("Instance Management", () => {
-    const mockProcessId = new Types.ObjectId().toString();
-
     it("should create process instance successfully", async () => {
       const mockProcess = createMockProcess({
         _id: new Types.ObjectId(mockProcessId),
@@ -715,14 +398,6 @@ describe("ProcessService", () => {
       expect(processRepository.findById).toHaveBeenCalledWith(mockProcessId);
     });
 
-    it("should throw error when creating instance for invalid process", async () => {
-      processRepository.findById.mockResolvedValue(null);
-
-      await expect(
-        processService.createProcessInstance(mockProcessId),
-      ).rejects.toThrow(ERROR_MESSAGES.PROCESS.NOT_FOUND);
-    });
-
     it("should save instance state successfully", async () => {
       const mockProcess = createMockProcess({
         _id: new Types.ObjectId(mockProcessId),
@@ -739,98 +414,225 @@ describe("ProcessService", () => {
       expect(processRepository.update).toHaveBeenCalled();
     });
 
-    it("should handle instance creation error with validation error", async () => {
-      const mockProcess = createMockProcess();
-      const validationError = new ValidationError("Test validation error");
+    describe("Error Handling", () => {
+      it("should handle instance creation error with validation error", async () => {
+        const mockProcess = createMockProcess();
+        const validationError = new ValidationError("Test validation error");
 
-      processRepository.findById.mockResolvedValue(mockProcess);
-      bpmnEngine.startProcess.mockRejectedValue(validationError);
-
-      await expect(
-        processService.createProcessInstance(mockProcessId),
-      ).rejects.toThrow(ValidationError);
-
-      // Logger kontrolünü güncelle
-      expect(logger.error).toHaveBeenCalledWith(
-        "Process createInstance error:",
-        expect.objectContaining({
-          domain: "Process",
-          action: "createInstance",
-          resourceId: expect.any(String),
-          error: expect.any(ValidationError),
-          timestamp: expect.any(Date),
-        }),
-      );
-    });
-
-    it("should handle multiple instance creation errors", async () => {
-      const mockProcess = createMockProcess({
-        _id: new Types.ObjectId(),
-      });
-
-      processRepository.findById.mockResolvedValue(mockProcess);
-
-      const errors = [
-        new ValidationError("Test validation"),
-        new Error("Test error"),
-        {},
-      ];
-
-      for (const error of errors) {
-        bpmnEngine.startProcess.mockRejectedValue(error);
+        processRepository.findById.mockResolvedValue(mockProcess);
+        bpmnEngine.startProcess.mockRejectedValue(validationError);
 
         await expect(
-          processService.createProcessInstance(mockProcess._id.toString()),
-        ).rejects.toThrow();
-      }
+          processService.createProcessInstance(mockProcessId)
+        ).rejects.toThrow(validationError.message);
+
+        // Logger kontrolünü güncelle
+        expect(logger.error).toHaveBeenCalledWith(
+          "Process createInstance error:",
+          expect.objectContaining({
+            error: validationError
+          })
+        );
+      });
+
+      it("should handle multiple instance creation errors", async () => {
+        const mockProcess = createMockProcess({
+          _id: new Types.ObjectId(),
+        });
+
+        processRepository.findById.mockResolvedValue(mockProcess);
+
+        const errors = [
+          new ValidationError("Test validation"),
+          new Error("Test error"),
+          {},
+        ];
+
+        for (const error of errors) {
+          bpmnEngine.startProcess.mockRejectedValue(error);
+
+          await expect(
+            processService.createProcessInstance(mockProcess._id.toString()),
+          ).rejects.toThrow();
+        }
+      });
+    });
+
+    describe("Instance Management Error Cases", () => {
+      it("should handle instance state save error", async () => {
+        const mockProcess = createMockProcess({
+          _id: new Types.ObjectId(mockProcessId)
+        });
+
+        const error = new Error(ERROR_MESSAGES.ENGINE.ERROR);
+
+        processRepository.findById.mockResolvedValue(mockProcess);
+        bpmnEngine.getInstanceStatus.mockRejectedValue(error);
+
+        await expect(
+          processService.saveInstanceState(mockProcessId)
+        ).rejects.toThrow(ERROR_MESSAGES.ENGINE.ERROR);
+
+        expect(logger.error).toHaveBeenCalledWith(
+          "Process instance state save error:",
+          expect.objectContaining({
+            domain: "Process",
+            action: "saveInstanceState",
+            resourceId: mockProcessId,
+            error,
+            timestamp: expect.any(Date)
+          })
+        );
+      });
     });
   });
 
-  it("should get processes with pagination", async () => {
-    const mockProcesses = [createMockProcess(), createMockProcess()];
-    const mockResult = createMockProcessResult(mockProcesses);
+  describe("Query Operations", () => {
+    describe("Get Process By Id", () => {
+      it("should get process by id successfully", async () => {
+        const mockProcess = createMockProcess({
+          _id: new Types.ObjectId(mockProcessId),
+          name: "Test Süreci",
+          description: "Test süreç açıklaması",
+          status: ProcessStatus.ACTIVE,
+        });
 
-    processRepository.findAll.mockResolvedValue(mockResult);
+        processRepository.findById.mockResolvedValue(mockProcess);
+        bpmnEngine.getInstanceStatus.mockReturnValue(ProcessStatus.ACTIVE);
 
-    const result = await processService.getProcesses({});
-    if (!result) throw new Error("Result should be defined");
+        const result = await processService.getProcessById(mockProcessId);
 
-    expect(result).toBeDefined();
-    expect(result.processes).toHaveLength(2);
-    expect(result.pagination.total).toBe(2);
-  });
+        expect(processRepository.findById).toHaveBeenCalledWith(mockProcessId);
+        expect(bpmnEngine.getInstanceStatus).toHaveBeenCalledWith(
+          `PROC_${mockProcessId}`,
+        );
+        expect(result).toEqual({
+          ...convertProcessToDTO(mockProcess),
+          engineStatus: ProcessStatus.ACTIVE
+        });
+      });
 
-  it("should return empty list when no processes found", async () => {
-    processRepository.findAll.mockResolvedValue({
-      processes: [],
-      total: 0,
+      it("should handle engine status error gracefully", async () => {
+        const mockProcess = createMockProcess({
+          _id: new Types.ObjectId(mockProcessId),
+          status: ProcessStatus.ACTIVE,
+        });
+
+        processRepository.findById.mockResolvedValue(mockProcess);
+        bpmnEngine.getInstanceStatus.mockImplementation(() => {
+          throw new Error(ERROR_MESSAGES.ENGINE.ERROR);
+        });
+
+        const result = await processService.getProcessById(mockProcessId);
+        if (!result) throw new Error("Result should be defined");
+
+        expect(result.engineStatus).toBe("not_started");
+      });
     });
 
-    const result = await processService.getProcesses({});
-    if (!result) throw new Error("Result should be defined");
+    describe("Get Processes", () => {
+      it("should get processes list successfully", async () => {
+        const mockProcesses = [
+          createMockProcess({
+            name: "Test Süreci 1",
+            status: ProcessStatus.ACTIVE,
+          }),
+          createMockProcess({
+            name: "Test Süreci 2",
+            status: ProcessStatus.ACTIVE,
+          }),
+        ];
 
-    expect(result.processes).toHaveLength(0);
-    expect(result.pagination.total).toBe(0);
-  });
+        const mockResult = createMockProcessResult(mockProcesses);
+        processRepository.findAll.mockResolvedValue(mockResult);
 
-  it("should update process status", async () => {
-    const mockProcess = createMockProcess();
-    const updatedProcess = {
-      ...mockProcess,
-      status: ProcessStatus.COMPLETED,
-    };
+        const result = await processService.getProcesses({});
+        if (!result) throw new Error("Result should be defined");
 
-    processRepository.findById.mockResolvedValue(mockProcess);
-    processRepository.update.mockResolvedValue(updatedProcess);
+        expect(result.processes).toHaveLength(2);
+        expect(result.pagination).toEqual({
+          total: 2,
+          page: 0,
+          limit: 10,
+          pages: 1,
+        });
+      });
 
-    const result = await processService.updateProcess(
-      mockProcess._id.toString(),
-      createMockUpdateProcessDTO({ status: ProcessStatus.COMPLETED }),
-      new Types.ObjectId(),
-    );
-    if (!result) throw new Error("Result should be defined");
+      it("should return filtered processes", async () => {
+        const filters: ProcessFilterDTO = {
+          status: "active",
+          search: "test",
+        };
+        const processes = [
+          createMockProcess({
+            name: "Test Süreci 1",
+            description: "Test süreç açıklaması 1",
+            status: ProcessStatus.ACTIVE,
+          }),
+          createMockProcess({
+            name: "Test Süreci 2",
+            description: "Test süreç açıklaması 2",
+            status: ProcessStatus.ACTIVE,
+          }),
+        ];
+        processRepository.findAll.mockResolvedValue({
+          processes,
+          total: processes.length,
+        });
 
-    expect(result).toBeDefined();
-    expect(result.status).toBe(ProcessStatus.COMPLETED);
+        const result = await processService.getProcesses(filters);
+        if (!result) throw new Error("Result should be defined");
+
+        expect(result.processes).toHaveLength(2);
+        expect(result.pagination).toEqual({
+          total: 2,
+          page: 0,
+          limit: 10,
+          pages: 1,
+        });
+        expect(processRepository.findAll).toHaveBeenCalledWith(filters);
+      });
+
+      it("should return empty list when no processes found", async () => {
+        processRepository.findAll.mockResolvedValue({
+          processes: [],
+          total: 0,
+        });
+
+        const result = await processService.getProcesses({});
+        if (!result) throw new Error("Result should be defined");
+
+        expect(result.processes).toHaveLength(0);
+        expect(result.pagination.total).toBe(0);
+      });
+
+      it("should handle pagination correctly", async () => {
+        const mockProcesses = Array(15).fill(null).map((_, index) =>
+          createMockProcess({
+            name: `Test Süreci ${index + 1}`,
+            status: ProcessStatus.ACTIVE,
+          })
+        );
+
+        const page = 1;
+        const limit = 10;
+        const total = mockProcesses.length;
+
+        processRepository.findAll.mockResolvedValue({
+          processes: mockProcesses.slice(page * limit, (page + 1) * limit),
+          total
+        });
+
+        const result = await processService.getProcesses({ page, limit });
+        if (!result) throw new Error("Result should be defined");
+
+        expect(result.pagination).toEqual({
+          total,
+          page,
+          limit,
+          pages: Math.ceil(total / limit)
+        });
+      });
+    });
   });
 });

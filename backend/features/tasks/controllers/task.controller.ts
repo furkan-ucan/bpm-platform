@@ -1,7 +1,7 @@
 import { type Response, type NextFunction } from 'express';
 
 import { type AuthenticatedRequest } from '@/features/auth/middleware/auth.middleware';
-import { AuthenticationError } from '@/shared/errors/types/app-error';
+import { AuthenticationError } from '@/shared/errors/common/authentication.error';
 import { type CreateTaskDTO, type UpdateTaskDTO, type TaskFilterDTO } from '@/shared/types/dtos/task.dto';
 
 import { type TaskService } from '../services/task.service';
@@ -13,7 +13,7 @@ type AuthHandler = (
 ) => Promise<void>;
 
 export class TaskController {
-    constructor(private taskService: TaskService) {}
+    constructor(private taskService: TaskService) { }
 
     public createTask: AuthHandler = async (req, res, next) => {
         try {
@@ -22,7 +22,7 @@ export class TaskController {
             }
             const taskData: CreateTaskDTO = req.body;
             const task = await this.taskService.createTask(taskData, req.user._id);
-            
+
             res.status(201).json({
                 status: 'success',
                 data: { task }
@@ -42,7 +42,7 @@ export class TaskController {
                 req.body.status,
                 req.user._id
             );
-            
+
             res.status(200).json({
                 status: 'success',
                 data: { task }
@@ -68,7 +68,7 @@ export class TaskController {
         try {
             const filters: TaskFilterDTO = req.query;
             const result = await this.taskService.getTasks(filters);
-            
+
             res.status(200).json({
                 status: 'success',
                 data: result
@@ -89,7 +89,7 @@ export class TaskController {
                 updateData,
                 req.user._id
             );
-            
+
             res.status(200).json({
                 status: 'success',
                 data: { task }

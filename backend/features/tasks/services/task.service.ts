@@ -2,7 +2,7 @@ import { type Types } from 'mongoose';
 
 import { type BPMNEngine } from '@/core/bpmn/engine/bpmn-engine';
 import { convertTaskToDTO } from '@/features/tasks/utils/task.utils';
-import { ValidationError } from '@/shared/errors/types/app-error';
+import { ValidationError } from '@/shared/errors/common/validation.error';
 import { type ITaskRepository } from '@/shared/interfaces/repositories/ITaskRepository';
 import { type CreateTaskDTO, type UpdateTaskDTO, type TaskFilterDTO } from '@/shared/types/dtos/task.dto';
 
@@ -10,7 +10,7 @@ export class TaskService {
     constructor(
         private taskRepository: ITaskRepository,
         private bpmnEngine: BPMNEngine
-    ) {}
+    ) { }
 
     async createTask(data: CreateTaskDTO, userId: Types.ObjectId) {
         try {
@@ -44,7 +44,7 @@ export class TaskService {
 
     async updateTaskStatus(id: string, status: string, userId: Types.ObjectId) {
         const task = await this.taskRepository.updateStatus(id, status, userId);
-        
+
         await this.bpmnEngine.executeTask(
             `PROC_${task.processId}`,
             task.stepId,

@@ -10,6 +10,14 @@ export interface CreateProcessDTO {
   name: string;
   description?: string;
   bpmnXml: string;
+  category: string;
+  priority?: 'low' | 'medium' | 'high';
+  participants?: Types.ObjectId[];
+  metadata?: {
+    estimatedDuration?: number;
+    costCenter?: string;
+    tags?: string[];
+  };
   isTemplate?: boolean;
 }
 
@@ -18,9 +26,16 @@ export interface UpdateProcessDTO {
   description?: string;
   bpmnXml?: string;
   status?: ProcessStatus;
+  category?: string;
+  priority?: 'low' | 'medium' | 'high';
+  participants?: Types.ObjectId[];
+  metadata?: {
+    estimatedDuration?: number;
+    costCenter?: string;
+    tags?: string[];
+  };
   isTemplate?: boolean;
-  lastUpdated: Date;
-  updatedAt: Date; // Required
+  updatedAt: Date;
 }
 
 export interface ProcessStepDTO {
@@ -34,19 +49,30 @@ export interface ProcessStepDTO {
 export interface ProcessFilterDTO {
   page?: number;
   limit?: number;
-  status?: "active" | "inactive" | "archived";
+  createdBy?: Types.ObjectId;
+  status?: 'active' | 'inactive' | 'archived';
+  category?: string;
+  priority?: string;
   search?: string;
-  createdBy?: string;
-  isTemplate?: boolean;
-  fromDate?: string;
-  toDate?: string;
+  startDate?: Date;
+  endDate?: Date;
 }
 
 export interface ProcessResponseDTO {
   id: string;
   name: string;
   description?: string;
+  bpmnXml: string;
   status: ProcessStatus;
+  category: string;
+  priority: 'low' | 'medium' | 'high';
+  owner?: string;
+  participants?: string[];
+  metadata?: {
+    estimatedDuration?: number;
+    costCenter?: string;
+    tags?: string[];
+  };
   createdBy: string;
   updatedBy?: string;
   version: number;

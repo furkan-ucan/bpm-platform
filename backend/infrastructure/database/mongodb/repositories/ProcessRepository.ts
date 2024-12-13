@@ -1,7 +1,8 @@
 import { type Model, Types } from 'mongoose';
 
 import { type IProcess, Process } from '@/features/processes/models/process.model';
-import { NotFoundError, ValidationError } from '@/shared/errors/types/app-error';
+import { NotFoundError } from '@/shared/errors/common/not-found.error';
+import { ValidationError } from '@/shared/errors/common/validation.error';
 import { type IProcessRepository } from '@/shared/interfaces/repositories/IProcessRepository';
 import { type CreateProcessDTO, type UpdateProcessDTO, type ProcessFilterDTO } from '@/shared/types/dtos/process.dto';
 import { logger } from '@/shared/utils/logger';

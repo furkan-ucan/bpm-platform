@@ -1,7 +1,7 @@
 import jwt from 'jsonwebtoken';
 
 import { env } from '@/config';
-import { AuthenticationError } from '@/shared/errors/types/app-error';
+import { AuthenticationError } from '@/shared/errors/common/authentication.error';
 
 type TokenType = 'access' | 'refresh';
 
@@ -18,7 +18,8 @@ export const generateToken = async (
     type: TokenType = 'access'
 ): Promise<string> => {
     return jwt.sign(payload, getTokenSecret(type), {
-        expiresIn: getTokenExpiration(type)
+        expiresIn: getTokenExpiration(type),
+        algorithm: 'HS512'
     });
 };
 

@@ -1,7 +1,7 @@
 import { createClient, type RedisClientType } from "redis";
 
 import { env } from "@/config";
-import { TechnicalError } from "@/shared/errors/types";
+import { TechnicalError } from "@/shared/errors/common/technical.error";
 import { logger } from "@/shared/utils/logger";
 
 export class RedisCache {

@@ -2,7 +2,7 @@ import jwt from 'jsonwebtoken';
 import { type Document } from 'mongoose';
 
 import { env } from '@/config/index.js';
-import { AuthenticationError } from '@/shared/errors/types/app-error.js';
+import { AuthenticationError } from '@/shared/errors/common/authentication.error';
 
 import { type IUser } from '../models/user.model.js';
 

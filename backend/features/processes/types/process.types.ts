@@ -11,15 +11,15 @@ export enum ProcessStatus {
   ARCHIVED = 'archived'
 }
 
-export type StepType = "task" | "approval" | "notification";
+export type StepType = "task" | "approval" | "notification" | "automation" | "decision";
 export type StepStatus = "pending" | "completed" | "rejected";
 
 export interface ProcessStep {
   id?: string;
   elementId?: string;
   name: string;
-  type: 'task' | 'approval' | 'notification';
-  status: 'pending' | 'completed' | 'rejected';
+  type: StepType;  // Burada StepType'ı kullanıyoruz
+  status: StepStatus;
   assignedTo?: Types.ObjectId;
   dueDate?: Date;
   sequence: number;

@@ -7,14 +7,20 @@ export class ProcessMapper {
             id: process._id.toString(),
             name: process.name,
             description: process.description,
+            bpmnXml: process.bpmnXml,
             status: process.status,
-            createdBy: process.createdBy.toString(),
-            updatedBy: process.updatedBy?.toString(),
-            version: process.version,
+            category: process.category,
+            priority: process.priority,
+            owner: process.owner?.toString(),
+            participants: process.participants?.map(p => p.toString()),
+            metadata: process.metadata,
             isTemplate: process.isTemplate,
+            version: process.version,
             steps: process.steps,
             createdAt: process.createdAt,
-            updatedAt: process.updatedAt
+            updatedAt: process.updatedAt,
+            createdBy: process.createdBy?.toString(),
+            updatedBy: process.updatedBy?.toString()
         };
     }
 } 

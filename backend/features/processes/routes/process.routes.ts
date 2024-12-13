@@ -1,22 +1,22 @@
-import { Router , type RequestHandler } from 'express';
+import { Router, type RequestHandler } from 'express';
 
-import { BPMNEngine } from '@/core/bpmn/engine/bpmn-engine';
+import { BPMNEngineImpl } from '@/core/bpmn/engine/bpmn-engine';
 import { authenticate } from '@/features/auth/middleware/auth.middleware';
 import { ProcessRepository } from '@/infrastructure/database/mongodb/repositories/ProcessRepository';
 
 import { ProcessController } from '../controllers/process.controller';
 import { ProcessService } from '../services/process.service';
-import { 
-    validateCreateProcess, 
-    validateUpdateProcess, 
-    validateProcessFilters, 
-    validateProcessId 
+import {
+    validateCreateProcess,
+    validateUpdateProcess,
+    validateProcessFilters,
+    validateProcessId
 } from '../validators/process.validator';
 
 
 const router = Router();
 const processRepository = new ProcessRepository();
-const bpmnEngine = new BPMNEngine();
+const bpmnEngine = new BPMNEngineImpl();
 const processService = new ProcessService(processRepository, bpmnEngine);
 const processController = new ProcessController(processService);
 

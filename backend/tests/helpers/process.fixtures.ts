@@ -1,10 +1,16 @@
 import { Types } from "mongoose";
 import { type IProcess } from "@/features/processes/models/process.model";
-import { ProcessStatus } from "@/features/processes/types/process.types";
+import {
+  ProcessStatus,
+  type ProcessStep,
+  type StepType,
+  type StepStatus
+} from "@/features/processes/types/process.types";
 import {
   type CreateProcessDTO,
   type UpdateProcessDTO,
 } from "@/shared/types/dtos/process.dto";
+import { type BPMNElement } from "@/shared/types/bpmn.types";
 
 export const createMockProcess = (overrides = {}): IProcess => ({
   _id: new Types.ObjectId(),
@@ -41,7 +47,6 @@ export const createMockUpdateProcessDTO = (overrides = {}) => ({
   status: ProcessStatus.ACTIVE,
   bpmnXml: "<xml>updated</xml>",
   isTemplate: false,
-  lastUpdated: new Date(),
   updatedAt: new Date(),
   ...overrides,
 });
@@ -51,6 +56,7 @@ export const createProcessDTO: CreateProcessDTO = {
   description: "Test Description",
   bpmnXml: "<xml>test</xml>",
   isTemplate: false,
+  category: "test",
 };
 
 export const updateProcessDTO: UpdateProcessDTO = {
@@ -59,6 +65,52 @@ export const updateProcessDTO: UpdateProcessDTO = {
   bpmnXml: "<xml>updated</xml>",
   status: ProcessStatus.ACTIVE,
   isTemplate: false,
-  lastUpdated: new Date(),
-  updatedAt: new Date(),
+  updatedAt: new Date()
 };
+
+export const createExpectedProcessDTO = (process: IProcess) => ({
+  id: process._id.toString(),
+  name: process.name,
+  description: process.description,
+  bpmnXml: process.bpmnXml,
+  status: process.status,
+  category: process.category,
+  priority: process.priority,
+  owner: process.owner?.toString(),
+  participants: process.participants?.map(p => p.toString()),
+  metadata: process.metadata,
+  steps: process.steps,
+  isTemplate: process.isTemplate,
+  version: process.version,
+  createdBy: process.createdBy.toString(),
+  updatedBy: process.updatedBy?.toString(),
+  createdAt: process.createdAt,
+  updatedAt: process.updatedAt,
+});
+
+export const createBpmnElement = (overrides = {}): BPMNElement => ({
+  id: "task1",
+  name: "Test Task",
+  type: "userTask",
+  outgoing: [],
+  ...overrides
+});
+
+interface ProcessStepOverrides {
+  elementId?: string;
+  name?: string;
+  type?: StepType;
+  status?: StepStatus;
+  sequence?: number;
+  dependsOn?: string[];
+}
+
+export const createExpectedProcessStep = (overrides: ProcessStepOverrides = {}): ProcessStep => ({
+  elementId: overrides.elementId || "task1",
+  name: overrides.name || "Test Task",
+  type: overrides.type || "task",
+  status: overrides.status || "pending",
+  sequence: overrides.sequence || 1,
+  dependsOn: overrides.dependsOn || [],
+  ...overrides
+});

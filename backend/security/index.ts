@@ -10,11 +10,11 @@ import { corsConfig } from './cors/cors.config.js';
 
 // Rate Limiter Configuration
 export const rateLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 dakika
-  max: 100, // Her IP için limit
-  message: "Too many requests from this IP, please try again later",
-  standardHeaders: true,
-  legacyHeaders: false,
+    windowMs: 15 * 60 * 1000, // 15 dakika
+    max: 100, // Her IP için limit
+    message: "Too many requests from this IP, please try again later",
+    standardHeaders: true,
+    legacyHeaders: false,
 });
 
 export function configureSecurity(config: SecurityConfig) {
@@ -53,10 +53,10 @@ function configureJwt(jwtConfig: SecurityConfig['jwt']) {
         getToken: getTokenFromRequest
     }).unless({
         path: [
-          "/api/v1/auth/login",
-          "/api/v1/auth/register",
-          "/api/v1/auth/refresh-token",
-          { url: /^\/api\/v1\/docs.*/, methods: ["GET"] },
+            "/api/v1/auth/login",
+            "/api/v1/auth/register",
+            "/api/v1/auth/refresh-token",
+            { url: /^\/api\/v1\/docs.*/, methods: ["GET"] },
         ],
     });
 }
@@ -66,12 +66,12 @@ export const securityMiddleware = [
     helmet(),
     rateLimiter,
     configureSecurity({
-      cors: {
-        allowedOrigins: env.allowedOrigins
-      },
-      jwt: {
-        secret: env.jwt.secret,
-        expiresIn: env.jwt.expiresIn
-      }
+        cors: {
+            allowedOrigins: env.allowedOrigins
+        },
+        jwt: {
+            secret: env.jwt.secret,
+            expiresIn: env.jwt.expiresIn
+        }
     }).jwt,
-  ];
+];

@@ -1,30 +1,31 @@
-import { type Response, type NextFunction , RequestHandler as ExpressHandler } from 'express';
-
-import { type AuthenticatedRequest } from '@/features/auth/middleware/auth.middleware';
-import { type CreateProcessDTO, type UpdateProcessDTO, type ProcessFilterDTO } from '@/shared/types/dtos/process.dto';
-
-import { type ProcessService } from '../services/process.service';
-
-type AuthRequestHandler = (
-    req: AuthenticatedRequest,
-    res: Response,
-    next: NextFunction
-) => Promise<void>;
-
+import { type Response, type NextFunction } from 'express';
+import {
+    type AuthenticatedRequest,
+    type AuthRequestHandler
+} from '@/shared/types/auth';
+import { AuthenticationError } from '@/shared/errors/common/authentication.error';
+import { ProcessOperationError } from '../errors/process.errors';
+import { PROCESS_ERROR_MESSAGES } from '../errors/messages';
+import { ProcessService } from '../services/process.service';
+import {
+    type CreateProcessDTO,
+    type UpdateProcessDTO,
+    type ProcessFilterDTO
+} from '@/shared/types/dtos/process.dto';
 export class ProcessController {
-    constructor(private processService: ProcessService) {}
+    constructor(private readonly processService: ProcessService) { }
 
     public createProcess: AuthRequestHandler = async (req, res, next) => {
         try {
             if (!req.user) {
-                throw new Error('Unauthorized');
+                throw new AuthenticationError('Kimlik doğrulaması gerekli');
             }
             const processData: CreateProcessDTO = req.body;
             const process = await this.processService.createProcess(
                 processData,
                 req.user.id
             );
-            
+
             res.status(201).json({
                 status: 'success',
                 data: { process }
@@ -38,7 +39,7 @@ export class ProcessController {
         try {
             const filters: ProcessFilterDTO = req.query;
             const result = await this.processService.getProcesses(filters);
-            
+
             res.status(200).json({
                 status: 'success',
                 data: result
@@ -51,7 +52,7 @@ export class ProcessController {
     public getProcessById: AuthRequestHandler = async (req, res, next) => {
         try {
             const process = await this.processService.getProcessById(req.params.id);
-            
+
             res.status(200).json({
                 status: 'success',
                 data: { process }
@@ -72,7 +73,7 @@ export class ProcessController {
                 updateData,
                 req.user.id
             );
-            
+
             res.status(200).json({
                 status: 'success',
                 data: { process }
@@ -85,10 +86,15 @@ export class ProcessController {
     public deleteProcess: AuthRequestHandler = async (req, res, next) => {
         try {
             if (!req.user) {
-                throw new Error('Unauthorized');
+                throw new AuthenticationError('Kimlik doğrulaması gerekli');
             }
+
             const result = await this.processService.deleteProcess(req.params.id);
-            
+
+            if (!result) {
+                throw new ProcessOperationError(PROCESS_ERROR_MESSAGES.DELETE_FAILED);
+            }
+
             res.status(200).json({
                 status: 'success',
                 message: result.message

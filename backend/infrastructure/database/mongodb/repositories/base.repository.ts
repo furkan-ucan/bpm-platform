@@ -6,15 +6,13 @@ import {
   type QueryOptions,
 } from "mongoose";
 
-import { logger } from "@/monitoring/logging/providers/winston.logger";
-import {
-  NotFoundError,
-  ValidationError,
-  TechnicalError,
-} from "@/shared/errors/types/app-error";
+import logger from "@/monitoring/logging/providers/winston.logger";
+import { TechnicalError } from "@/shared/errors/common/technical.error";
+import { NotFoundError } from "@/shared/errors/common/not-found.error";
+import { ValidationError } from "@/shared/errors/common/validation.error";
 
 export abstract class BaseRepository<T extends Document> {
-  constructor(protected readonly model: Model<T>) {}
+  constructor(protected readonly model: Model<T>) { }
 
   protected async executeQuery<TResult>(
     operation: () => Promise<TResult>,

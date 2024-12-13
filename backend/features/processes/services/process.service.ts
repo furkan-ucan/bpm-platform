@@ -1,33 +1,36 @@
 import { type Types } from "mongoose";
 
-import { type BPMNEngine } from "@/core/bpmn/engine/bpmn-engine.js";
-import { type ParsedBPMN } from "@/core/bpmn/parsers/bpmn-parser.js";
-import { ValidationError } from "@/shared/errors/types/app-error.js";
-import { type IProcessRepository } from "@/shared/interfaces/repositories/IProcessRepository.js";
+import { type BPMNEngine } from "@/core/bpmn/engine/bpmn-engine";
+import { type ParsedBPMN } from "@/core/bpmn/parsers/bpmn-parser";
+import { ValidationError } from "@/shared/errors/common/validation.error";
+import { type IProcessRepository } from "@/shared/interfaces/repositories/IProcessRepository";
 import {
   type CreateProcessDTO,
   type UpdateProcessDTO,
   type ProcessFilterDTO,
-} from "@/shared/types/dtos/process.dto.js";
-import { logger } from "@/shared/utils/logger.js";
+} from "@/shared/types/dtos/process.dto";
+import { logger } from "@/shared/utils/logger";
 
 import { ProcessStatus, StepStatus } from "../types/process.types.js";
 import { convertProcessToDTO } from "../utils/process.utils.js";
-import { parseBPMNXml } from "@/core/bpmn/parsers/bpmn-parser.js";
-import { type ProcessContext } from "@/core/bpmn/types/process.types.js";
-import { ProcessInstanceStatus } from "@/core/bpmn/types/process.types.js";
+import { parseBPMNXml } from "@/core/bpmn/parsers/bpmn-parser";
+import { type ProcessContext } from "@/core/bpmn/types/process.types";
+import { ProcessInstanceStatus } from "@/core/bpmn/types/process.types";
 import {
   type ProcessHistoryEntry,
   BPMNHistoryEntry,
-} from "@/core/bpmn/types/instance.types.js";
+} from "@/core/bpmn/types/instance.types";
 import { ProcessValidator } from "../validators/process.validator";
-import { NotFoundError } from "@/shared/errors/types/app-error.js";
-import { DomainErrorHandler } from "@/shared/errors/handlers/error-handler.js";
+import { NotFoundError } from "@/shared/errors/common/not-found.error";
+import { DomainErrorHandler } from "@/shared/errors/handlers/error-handler";
 import { ProcessMapper } from "../mappers/process.mapper";
 import { IProcess } from "../models/process.model.js";
-import { AppError, BusinessError } from "@/shared/errors/types/app-error.js";
-import { ERROR_MESSAGES } from "@/shared/constants/error-messages.js";
-import { TechnicalError } from "@/shared/errors/types/app-error.js";
+import { AppError } from "@/shared/errors/base/app-error";
+import { BusinessError } from "@/shared/errors/common/business.error";
+import { ERROR_MESSAGES } from "@/shared/constants/error-messages";
+import { TechnicalError } from "@/shared/errors/common/technical.error";
+import { PROCESS_ERROR_MESSAGES } from '../errors/messages';
+import { ProcessOperationError, ProcessNotFoundError } from '../errors/process.errors';
 
 export class ProcessService {
   private processMapper: ProcessMapper;
@@ -49,6 +52,19 @@ export class ProcessService {
       [ProcessInstanceStatus.SUSPENDED]: ProcessStatus.INACTIVE,
       [ProcessInstanceStatus.FAILED]: ProcessStatus.CANCELLED,
     };
+    return statusMap[status] || ProcessStatus.INACTIVE;
+  }
+
+  private getProcessInstanceStatus(status: ProcessStatus): ProcessInstanceStatus {
+    const statusMap: Record<ProcessStatus, ProcessInstanceStatus> = {
+      [ProcessStatus.ACTIVE]: ProcessInstanceStatus.ACTIVE,
+      [ProcessStatus.INACTIVE]: ProcessInstanceStatus.INACTIVE,
+      [ProcessStatus.COMPLETED]: ProcessInstanceStatus.COMPLETED,
+      [ProcessStatus.CANCELLED]: ProcessInstanceStatus.FAILED,
+      [ProcessStatus.DRAFT]: ProcessInstanceStatus.INACTIVE,
+      [ProcessStatus.PENDING]: ProcessInstanceStatus.ACTIVE,
+      [ProcessStatus.ARCHIVED]: ProcessInstanceStatus.INACTIVE
+    };
     return statusMap[status];
   }
 
@@ -65,32 +81,30 @@ export class ProcessService {
       }
 
       const process = await this.processRepository.create(processDTO, userId);
+      const parsedBpmn = parseBPMNXml(processDTO.bpmnXml);
 
-      try {
-        const parsedBpmn = parseBPMNXml(processDTO.bpmnXml);
-        await this.bpmnEngine.startProcess(parsedBpmn, {
-          processId: process._id.toString(),
-          userId: userId.toString(),
-          variables: {},
-        });
-      } catch (error) {
-        logger.error("BPMN Engine hatası:", { error, processId: process._id });
-        throw new BusinessError(ERROR_MESSAGES.PROCESS.CREATION_FAILED);
-      }
-
-      return process;
-    } catch (error) {
-      logger.error("Süreç oluşturma hatası:", {
-        error,
-        processName: processDTO.name,
+      await this.bpmnEngine.startProcess(parsedBpmn, {
+        processId: process._id.toString(),
         userId: userId.toString(),
+        variables: {},
       });
 
-      if (error instanceof AppError) {
+      return ProcessMapper.toDTO(process);
+    } catch (error) {
+      logger.error("Process creation error:", {
+        domain: "Process",
+        action: "create",
+        processName: processDTO.name,
+        userId: userId.toString(),
+        error,
+        timestamp: new Date()
+      });
+
+      if (error instanceof ValidationError || error instanceof NotFoundError) {
         throw error;
       }
 
-      throw new BusinessError(ERROR_MESSAGES.PROCESS.CREATION_FAILED);
+      throw new TechnicalError(ERROR_MESSAGES.PROCESS.CREATION_FAILED);
     }
   }
 
@@ -98,7 +112,7 @@ export class ProcessService {
     try {
       const process = await this.processRepository.findById(id);
       if (!process) {
-        throw new NotFoundError(`${id} ID'li süreç bulunamadı`);
+        throw new NotFoundError(`${id} ${ERROR_MESSAGES.PROCESS.NOT_FOUND}`);
       }
 
       const instanceId = `PROC_${process._id.toString()}`;
@@ -107,10 +121,12 @@ export class ProcessService {
       try {
         engineStatus = await this.bpmnEngine.getInstanceStatus(instanceId);
       } catch (error) {
-        logger.warn("Motor durum hatası:", {
+        logger.warn("Process engine status error:", {
+          domain: "Process",
+          action: "getStatus",
+          resourceId: id,
           error,
-          processId: id,
-          timestamp: new Date(),
+          timestamp: new Date()
         });
         engineStatus = "not_started";
       }
@@ -120,11 +136,19 @@ export class ProcessService {
         engineStatus,
       };
     } catch (error) {
-      DomainErrorHandler.handle(error, {
+      logger.error("Process fetch error:", {
         domain: "Process",
         action: "getById",
         resourceId: id,
+        error,
+        timestamp: new Date()
       });
+
+      if (error instanceof ValidationError || error instanceof NotFoundError) {
+        throw error;
+      }
+
+      throw new TechnicalError(ERROR_MESSAGES.ENGINE.ERROR);
     }
   }
 
@@ -143,11 +167,19 @@ export class ProcessService {
         },
       };
     } catch (error) {
-      DomainErrorHandler.handle(error, {
+      logger.error("Process list fetch error:", {
         domain: "Process",
         action: "getAll",
-        userId: filters.createdBy,
+        userId: filters.createdBy?.toString(),
+        error,
+        timestamp: new Date()
       });
+
+      if (error instanceof ValidationError || error instanceof NotFoundError) {
+        throw error;
+      }
+
+      throw new TechnicalError(ERROR_MESSAGES.ENGINE.ERROR);
     }
   }
 
@@ -161,7 +193,7 @@ export class ProcessService {
 
       const existingProcess = await this.processRepository.findById(id);
       if (!existingProcess) {
-        throw new NotFoundError(`${id} ID'li süreç bulunamadı`);
+        throw new NotFoundError(`${id} ${ERROR_MESSAGES.PROCESS.NOT_FOUND}`);
       }
 
       if (data.name && data.name !== existingProcess.name) {
@@ -173,16 +205,27 @@ export class ProcessService {
         }
       }
 
-      const process = await this.processRepository.update(id, data, userId);
+      const processData = {
+        ...data,
+        updatedAt: new Date()
+      };
+
+      const process = await this.processRepository.update(id, processData, userId);
       return ProcessMapper.toDTO(process);
     } catch (error) {
-      logger.error("Süreç oluşturma hatası:", {
+      logger.error("Process update error:", {
+        domain: "Process",
+        action: "update",
+        resourceId: id,
         error,
-        processName: data.name,
+        timestamp: new Date()
       });
-      throw error instanceof ValidationError
-        ? error
-        : new ValidationError(ERROR_MESSAGES.PROCESS.CREATION_FAILED);
+
+      if (error instanceof ValidationError || error instanceof NotFoundError) {
+        throw error;
+      }
+
+      throw new TechnicalError(ERROR_MESSAGES.ENGINE.ERROR);
     }
   }
 
@@ -190,7 +233,7 @@ export class ProcessService {
     try {
       const process = await this.processRepository.findById(id);
       if (!process) {
-        throw new NotFoundError(`${id} ID'li süreç bulunamadı`);
+        throw new NotFoundError(`${id} ${ERROR_MESSAGES.PROCESS.NOT_FOUND}`);
       }
 
       try {
@@ -198,60 +241,70 @@ export class ProcessService {
         await this.bpmnEngine.stopInstance(instanceId);
       } catch (error) {
         logger.warn("Engine stop error:", {
+          domain: "Process",
+          action: "stop",
+          resourceId: id,
           error,
-          processId: id,
+          timestamp: new Date()
         });
       }
 
       await this.processRepository.delete(id);
-      return { message: "Süreç başarıyla silindi" };
+      return { message: PROCESS_ERROR_MESSAGES.DELETE_SUCCESS };
     } catch (error) {
-      DomainErrorHandler.handle(error, {
+      logger.error("Process delete error:", {
         domain: "Process",
         action: "delete",
         resourceId: id,
+        error,
+        timestamp: new Date()
       });
+
+      if (error instanceof ValidationError || error instanceof NotFoundError) {
+        throw error;
+      }
+
+      throw new TechnicalError(ERROR_MESSAGES.ENGINE.ERROR);
     }
   }
 
-  public async updateProcessStatus(id: string, status: string): Promise<void> {
-    let process: IProcess | null = null;
+  public async updateProcessStatus(id: string, status: ProcessStatus) {
     try {
-      process = await this.processRepository.findById(id);
+      const process = await this.processRepository.findById(id);
       if (!process) {
         throw new NotFoundError(ERROR_MESSAGES.PROCESS.NOT_FOUND);
       }
 
-      if (!["active", "inactive", "archived"].includes(status)) {
-        throw new ValidationError(ERROR_MESSAGES.PROCESS.INVALID_STATUS);
-      }
-
       const instanceId = `PROC_${process._id.toString()}`;
-      try {
-        await this.bpmnEngine.updateInstanceStatus(
-          instanceId,
-          status.toUpperCase() as ProcessInstanceStatus,
-        );
-      } catch (error) {
-        throw new TechnicalError(ERROR_MESSAGES.ENGINE.UPDATE_FAILED);
-      }
+      await this.bpmnEngine.updateInstanceStatus(
+        instanceId,
+        this.getProcessInstanceStatus(status)
+      );
 
       await this.processRepository.update(
         id,
         {
-          status: status as ProcessStatus,
-          updatedAt: new Date(),
-          lastUpdated: new Date(),
+          status,
+          updatedAt: new Date()
         },
-        process._id,
+        process.createdBy
       );
+
+      return ProcessMapper.toDTO(process);
     } catch (error) {
-      DomainErrorHandler.handle(error, {
+      logger.error("Process status update error:", {
         domain: "Process",
         action: "updateStatus",
         resourceId: id,
-        userId: process?._id.toString(),
+        error,
+        timestamp: new Date()
       });
+
+      if (error instanceof ValidationError || error instanceof NotFoundError) {
+        throw error;
+      }
+
+      throw new TechnicalError(ERROR_MESSAGES.ENGINE.UPDATE_FAILED);
     }
   }
 
@@ -274,45 +327,83 @@ export class ProcessService {
       const instance = await this.bpmnEngine.startProcess(parsedBpmn, context);
       return instance;
     } catch (error) {
-      DomainErrorHandler.handle(error, {
+      logger.error("Process start error:", {
         domain: "Process",
         action: "start",
         resourceId: processId.toString(),
         userId: userId.toString(),
+        error,
+        timestamp: new Date()
       });
+
+      if (error instanceof ValidationError || error instanceof NotFoundError) {
+        throw error;
+      }
+
+      throw new TechnicalError(ERROR_MESSAGES.ENGINE.ERROR);
     }
   }
 
   public async getProcessStatus(processId: string): Promise<string> {
-    const instance = await this.bpmnEngine.getInstanceStatus(processId);
-    return instance.status;
+    try {
+      const instance = await this.bpmnEngine.getInstanceStatus(processId);
+      return instance.status;
+    } catch (error) {
+      logger.error("Process status fetch error:", {
+        domain: "Process",
+        action: "getStatus",
+        resourceId: processId,
+        error,
+        timestamp: new Date()
+      });
+
+      if (error instanceof ValidationError || error instanceof NotFoundError) {
+        throw error;
+      }
+
+      throw new TechnicalError(ERROR_MESSAGES.ENGINE.ERROR);
+    }
   }
 
   public async saveInstanceState(processId: string): Promise<void> {
-    const process = await this.processRepository.findById(processId);
-    if (!process) {
-      throw new ValidationError("Süreç bulunamadı");
+    try {
+      const process = await this.processRepository.findById(processId);
+      if (!process) {
+        throw new NotFoundError(ERROR_MESSAGES.PROCESS.NOT_FOUND);
+      }
+
+      const instanceId = `PROC_${process._id.toString()}`;
+      const instance = await this.bpmnEngine.getInstanceStatus(instanceId);
+
+      await this.processRepository.update(
+        processId,
+        {
+          status: this.mapInstanceStatusToProcessStatus(instance.status),
+          updatedAt: new Date()
+        },
+        process.createdBy
+      );
+
+      logger.info("Process instance state saved", {
+        processId,
+        status: instance.status,
+        timestamp: new Date()
+      });
+    } catch (error) {
+      logger.error("Process instance state save error:", {
+        domain: "Process",
+        action: "saveInstanceState",
+        resourceId: processId,
+        error,
+        timestamp: new Date()
+      });
+
+      if (error instanceof ValidationError || error instanceof NotFoundError) {
+        throw error;
+      }
+
+      throw new TechnicalError(ERROR_MESSAGES.ENGINE.ERROR);
     }
-
-    const instanceId = `PROC_${process._id.toString()}`;
-    const instance = await this.bpmnEngine.getInstanceStatus(instanceId);
-
-    // Sadece gerekli alanları güncelle
-    await this.processRepository.update(
-      processId,
-      {
-        status: this.mapInstanceStatusToProcessStatus(instance.status),
-        updatedAt: new Date(),
-        lastUpdated: new Date(),
-      },
-      process.createdBy,
-    );
-
-    logger.info("Process instance state saved", {
-      processId,
-      status: instance.status,
-      timestamp: new Date(),
-    });
   }
 
   private mapInstanceHistoryToProcessHistory(
@@ -344,12 +435,19 @@ export class ProcessService {
 
       return this.mapInstanceHistoryToProcessHistory(instance.history || []);
     } catch (error) {
-      DomainErrorHandler.handle(error, {
+      logger.error("Process history fetch error:", {
         domain: "Process",
         action: "getHistory",
         resourceId: processId,
+        error,
+        timestamp: new Date()
       });
-      return [];
+
+      if (error instanceof ValidationError || error instanceof NotFoundError) {
+        throw error;
+      }
+
+      throw new TechnicalError(ERROR_MESSAGES.ENGINE.ERROR);
     }
   }
 
@@ -377,12 +475,19 @@ export class ProcessService {
         instanceId: instance.id,
       };
     } catch (error) {
-      DomainErrorHandler.handle(error, {
+      logger.error("Process createInstance error:", {
         domain: "Process",
         action: "createInstance",
         resourceId: processId,
+        error,
+        timestamp: new Date()
       });
-      throw new TechnicalError(ERROR_MESSAGES.PROCESS.CREATION_FAILED);
+
+      if (error instanceof ValidationError || error instanceof NotFoundError) {
+        throw error;
+      }
+
+      throw new TechnicalError(ERROR_MESSAGES.ENGINE.ERROR);
     }
   }
 }

@@ -1,7 +1,7 @@
 import { type NextFunction, type Request, type Response } from 'express';
 import { type Document } from 'mongoose';
 
-import { AuthenticationError } from '@/shared/errors/types/app-error.js';
+import { AuthenticationError } from '@/shared/errors/common/authentication.error.js';
 import { type LoginDTO, type RegisterDTO } from '@/shared/types/dtos/auth.dto.js';
 
 import { type IUser } from '../models/user.model.js';
@@ -16,7 +16,7 @@ export class AuthController {
     constructor(
         private readonly tokenService: TokenService,
         private readonly authService: AuthService
-    ) {}
+    ) { }
 
     private validateBody<T>(body: unknown): T {
         if (!body || typeof body !== 'object') {
@@ -107,9 +107,9 @@ export class AuthController {
             if (!userId) {
                 throw new AuthenticationError('Geçersiz kullanıcı ID');
             }
-            
+
             await this.authService.logout(userId);
-            
+
             res.status(200).json({
                 success: true,
                 message: 'Başarıyla çıkış yapıldı'

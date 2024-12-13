@@ -1,7 +1,7 @@
 import { type Request, type Response, type NextFunction } from 'express';
 import { body, query, validationResult, param } from 'express-validator';
 
-import { ValidationError } from '@/shared/errors/types/app-error';
+import { ValidationError } from '@/shared/errors/common/validation.error';
 
 import { TaskStatus, TaskPriority } from '../types/task.types';
 

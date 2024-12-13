@@ -1,11 +1,11 @@
 import { type Model } from 'mongoose';
 
-import { AuthenticationError } from '@/shared/errors/types/app-error.js';
-import { type LoginDTO, type RegisterDTO } from '@/shared/types/dtos/auth.dto.js';
-import { type TokenResponse, type UserResponse } from '@/shared/types/responses/token.response.js';
+import { AuthenticationError } from '@/shared/errors/common/authentication.error';
+import { type LoginDTO, type RegisterDTO } from '@/shared/types/dtos/auth.dto';
+import { type TokenResponse, type UserResponse } from '@/shared/types/responses/token.response';
 
-import { type TokenService } from './token.service.js';
-import { type IUser } from '../models/user.model.js';
+import { type TokenService } from './token.service';
+import { type IUser } from '../models/user.model';
 
 const LOGIN_ATTEMPTS_WINDOW = 15 * 60 * 1000; // 15 minutes
 const MAX_LOGIN_ATTEMPTS = 5;
@@ -23,7 +23,7 @@ export class AuthService {
         const existingUser = await this.#userModel
             .findOne({ email: registerDto.email.toLowerCase() })
             .exec();
-        
+
         if (existingUser) {
             throw new AuthenticationError('Bu e-posta adresi zaten kullanımda');
         }
@@ -60,7 +60,7 @@ export class AuthService {
 
     public async refreshTokens(refreshToken: string): Promise<TokenResponse> {
         const payload = this.#tokenService.verifyRefreshToken(refreshToken);
-        
+
         const user = await this.#userModel
             .findById(payload.userId)
             .exec();
@@ -71,7 +71,7 @@ export class AuthService {
 
         this.validateUserStatus(user);
         await this.#tokenService.revokeToken(refreshToken);
-        
+
         return await this.generateTokenResponse(user);
     }
 
@@ -93,7 +93,7 @@ export class AuthService {
             if (timeSinceLastAttempt < LOGIN_ATTEMPTS_WINDOW) {
                 throw new AuthenticationError('Çok fazla başarısız giriş denemesi. Lütfen daha sonra tekrar deneyin');
             }
-            
+
             user.loginAttempts = 0;
             await user.save();
         }
@@ -101,7 +101,7 @@ export class AuthService {
 
     private async validatePassword(user: IUser, password: string): Promise<void> {
         const isPasswordValid = await user.comparePassword(password);
-        
+
         if (!isPasswordValid) {
             user.loginAttempts += 1;
             await user.save();
